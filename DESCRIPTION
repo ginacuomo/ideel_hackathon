@@ -29,7 +29,7 @@ Imports:
     spdep,
     magenta
 Remotes:
-    OJWatson/hrp2malaRia
+    OJWatson/magenta
 URL: https://ojwatson.github.io/arms/
 Encoding: UTF-8
 LazyData: true

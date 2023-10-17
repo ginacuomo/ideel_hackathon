@@ -22,7 +22,7 @@ didehpc::didehpc_config_global(temp=didehpc::path_mapping("tmp",
                                                           "//fi--didenas5/malaria",
                                                           "L:"),
                                credentials=credentials,
-                               cluster = "wpia-hn")
+                               cluster = "fi--didemrchnb")
 
 # Creating a Context
 context_name <- "analysis/dide-context"
@@ -39,35 +39,19 @@ ctx <- context::context_save(
 )
 
 # set up a specific config for here as we need to specify the large RAM nodes
-config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE, )
-
+config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE)
 
 # Configure the Queue
 obj <- didehpc::queue_didehpc(ctx, config = config)
 
 
 ## ----------------------------------------------------o
-## 2. Start Cluster Submissions --------------
+## 2. Create cluster param submissions --------------
 ## ----------------------------------------------------o
 
 # read in parms from lhs
 parms <- readRDS(here::here("analysis/data-derived/lhs_sample.rds"))
 param_list <- vector("list", length = nrow(parms))
-
-## safe submission
-try_fail_catch <- function(expr, attempts = 3){
-  r <- NULL
-  attempt <- 1
-  while( is.null(r) && attempt <= 3 ) {
-    attempt <- attempt + 1
-    try(
-      r <- eval(expr)
-    )
-  }
-
-}
-
-#### Simulation Set Up ####
 
 # main parameter set up
 N <- 100000
@@ -145,6 +129,24 @@ for(i in seq_len(nrow(parms))) {
 
 }
 
+## ----------------------------------------------------o
+## 3. Make cluster submissions --------------
+## ----------------------------------------------------
+
+
+## safe submission
+try_fail_catch <- function(expr, attempts = 3){
+  r <- NULL
+  attempt <- 1
+  while( is.null(r) && attempt <= 3 ) {
+    attempt <- attempt + 1
+    try(
+      r <- eval(expr)
+    )
+  }
+
+}
+obj$submit_workers(200)
 
 # 1. First do the non linked, i.e. independent loci
 sub <- which(parms$linked == 0)
