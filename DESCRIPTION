@@ -1,0 +1,38 @@
+Package: arms
+Title: Artemisinin resistance modelling via selection
+Version: 0.1.0
+Authors@R: 
+    c(person(given = "OJ",
+             family = "Watson",
+             role = c("aut", "cre"),
+             email = "oj.watson@hotmail.co.uk",
+             comment = c(ORCID = "0000-0003-2374-0741")))
+Description: arms is an R package for simulating the spread of artemisinin 
+  resistance in sub-Saharan African context. The package provides tools to 
+  simulate how any genetic trait may spread geographically by modelling the 
+  spread within regions based on assigned selection coefficients and modelling
+  the spread between regions based on rules for how parasites move between 
+  regions based on their adjacency or distance and the prevalence of the genetic
+  trait in given regions.  
+License: MIT + file LICENSE
+Depends: 
+    R (>= 2.10)
+Imports:
+    cowplot,
+    ggnewscale,
+    ggpattern,
+    ggplot2,
+    here,
+    magrittr,
+    R6,
+    purrr,
+    spdep,
+    magenta
+Remotes:
+    OJWatson/hrp2malaRia
+URL: https://ojwatson.github.io/arms/
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+VignetteBuilder: knitr
