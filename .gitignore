@@ -8,3 +8,5 @@ inst/doc
 /doc/
 /Meta/
 analysis/dide-context
+*.~lock*
+analysis/data-dhs
