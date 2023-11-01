@@ -22,7 +22,8 @@ didehpc::didehpc_config_global(temp=didehpc::path_mapping("tmp",
                                                           "//fi--didenas5/malaria",
                                                           "L:"),
                                credentials=credentials,
-                               cluster = "fi--didemrchnb")
+                               cluster = "wpia-hn")
+                              #cluster = "fi--didemrchnb")
 
 # Creating a Context
 context_name <- "analysis/dide-context"
@@ -39,7 +40,7 @@ ctx <- context::context_save(
 )
 
 # set up a specific config for here as we need to specify the large RAM nodes
-config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE)
+config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE, cores = 3)
 
 # Configure the Queue
 obj <- didehpc::queue_didehpc(ctx, config = config)
@@ -194,3 +195,55 @@ for(rep in 1:10){
   )
 
 }
+
+grps <- lapply(obj$task_bundle_list(), function(x){obj$task_bundle_get(x)})
+
+
+
+for(i in seq_along(grps)) {
+  st <- grps[[i]]$status()
+  if(any(st == "ERROR")) {
+  obj$submit(grps[[i]]$ids[as.integer(which(st == "ERROR"))])
+  }
+}
+
+## ----------------------------------------------------o
+## 4. Fetch Objects --------------
+## ----------------------------------------------------
+
+# let's put our sim outputs here
+dir.create(here::here("analysis/data-derived/sims"))
+
+# first save the parms used to generate (X)
+saveRDS(grps[[1]]$X, here::here("analysis/data-derived/sims/X.rds"))
+X <- grps[[1]]$X
+
+# Save our simulations across the parameter space
+for(i in seq_along(X)) {
+
+  message(i)
+
+  # create our results
+  r_i <- map(seq_along(grps), function(x) {
+    grps[[x]]$db$get_value(grps[[x]]$db$get_hash(grps[[x]]$tasks[[i]]$id, "task_results"), FALSE)
+  })
+
+  # remove the final loggers that are very large and unneeded
+  for(x in seq_along(r_i)) {
+    to_rm <- which(names(r_i[[x]][[length(r_i[[x]])]]$Loggers) %in%
+                     c("InfectionStates", "Ages", "IB", "ICA", "ICM", "ID") )
+    r_i[[x]][[length(r_i[[x]])]]$Loggers[to_rm] <- NULL
+  }
+
+  # and save to file
+  fn_i <- paste0("r_", i, ".rds")
+  saveRDS(r_i, here::here("analysis/data-derived/sims", fn_i))
+  gc()
+
+}
+
+# These sims have not been pushed to Github due to Github memory/size constraints
+
+# Analysis in next script uses these sims and the output of this is then saved
+# in data-derived
+
