@@ -86,7 +86,7 @@ dhappq_range <- c(0, 1)
 fitness_range <- 1
 
 # Mutation fixed at the 7 years
-mu_range <- c(0.0084)
+mu_range <- c(0.00084)
 
 # Starting resistance
 art_range <- c(0, 1)
