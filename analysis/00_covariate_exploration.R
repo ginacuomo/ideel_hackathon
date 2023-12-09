@@ -217,3 +217,52 @@ combined_samples <- combined_samples[which((combined_samples %>% select(1:3) %>%
 
 saveRDS(combined_samples, "analysis/data-derived/lhs_sample.rds")
 
+##
+
+## ----------------------------------------------------o
+## 5 Pull in drug use covariates --------------
+## ----------------------------------------------------o
+covars <-  readRDS("analysis/data-derived/global_covariate_ranges.rds")
+
+# format the average drug use
+dg <- readxl::read_xlsx("analysis/data-raw/PMI_GF_product_split_202122.xlsx",
+                        sheet = "Combined", skip = 2)
+dg <- dg %>% select(Country, AL, ASAQ, DP, ASPY) %>%
+  mutate(AL = AL + ASPY) %>% # we don't model ASPY yet so assign to AL (only tiny %)
+  select(Country, AL, ASAQ, DP) %>%
+  rename(iso3c = Country) %>%
+  mutate(iso3c = countrycode::countrycode(iso3c, "country.name.en", "iso3c")) %>%
+  mutate(across(AL:DP, round, digits = 4))
+
+# 10% shifters
+percent_shift_down <- function(x){
+  if(x < 0.5){
+    return(x-(0.1*(x)))
+  } else {
+    return(x-(0.1*(1-x)))
+  }
+}
+
+percent_shift_up <- function(x){
+  if(x < 0.5){
+    return(x+(0.1*(x)))
+  } else {
+    return(x+(0.1*(1-x)))
+  }
+}
+
+# Add variation
+dg <- dg %>%
+  mutate(across(AL:DP, vapply, FUN = percent_shift_down, FUN.VALUE =numeric(1), .names = "{.col}_min")) %>%
+  mutate(across(AL:DP, vapply, FUN = percent_shift_up, FUN.VALUE =numeric(1), .names = "{.col}_max"))
+
+# Make iso drug use tables
+afr_isos <- covars %>%
+  filter(iso3c %in% unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"])) %>%
+  pull(iso3c) %>% unique
+iso3c <- setdiff(afr_isos, dg$iso3c)
+dg <- rbind(dg, cbind(iso3c, dg %>% summarise(across(AL:DP_max, median))))
+
+# add in the drug use
+covars <- left_join(covars, dg)
+saveRDS(covars, "analysis/data-derived/global_covariate_ranges.rds")

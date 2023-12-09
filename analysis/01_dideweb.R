@@ -23,10 +23,10 @@ didehpc::didehpc_config_global(temp=didehpc::path_mapping("tmp",
                                                           "L:"),
                                credentials=credentials,
                                cluster = "wpia-hn")
-                              #cluster = "fi--didemrchnb")
+#cluster = "fi--didemrchnb")
 
 # Creating a Context
-context_name <- "analysis/dide-context"
+context_name <- "analysis/context-dide"
 
 ctx <- context::context_save(
   path = context_name,
@@ -40,7 +40,7 @@ ctx <- context::context_save(
 )
 
 # set up a specific config for here as we need to specify the large RAM nodes
-config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE, cores = 3)
+config <- didehpc::didehpc_config(use_workers = TRUE, parallel = FALSE, cores = 4)
 
 # Configure the Queue
 obj <- didehpc::queue_didehpc(ctx, config = config)
@@ -83,8 +83,8 @@ for(i in seq_len(nrow(parms))) {
     )
 
   plaf <- matrix(
-    c(rep(c(parms$asaq_res[i],parms$asaq[i],
-            parms$al_res[i],parms$al_res[i],
+    c(rep(c(parms$aq_res[i],parms$aq_res[i],
+            parms$lu_res[i],parms$lu_res[i],
             parms$art_res[i],
             parms$ppq_res[i]),hd),
       rep(0,nl*tl)),
@@ -147,7 +147,6 @@ try_fail_catch <- function(expr, attempts = 3){
   }
 
 }
-obj$submit_workers(200)
 
 # 1. First do the non linked, i.e. independent loci
 sub <- which(parms$linked == 0)
@@ -159,57 +158,73 @@ for(rep in 1:10){
       X = param_list[sub],
       timeout=0,
       FUN = function(x){
-        return(magenta::pipeline(EIR=x$EIR,
-                                 seed=x$seed,
-                                 save_lineages = x$save_lineages,
-                                 N=x$N,
-                                 mutation_rate = x$mutation_rate,
-                                 mutation_flag = x$mutation_flag,
-                                 sample_size = x$sample_size,
-                                 sample_reps = x$sample_reps,
-                                 years=x$years,
-                                 survival_percentage=x$survival_percentage,
-                                 itn_cov=x$itn_cov,
-                                 irs_cov=x$irs_cov,
-                                 ft=x$ft,
-                                 genetics_df_without_summarising = x$genetics_df_without_summarising,
-                                 spatial_incidence_matrix=x$spatial_incidence_matrix,
-                                 spatial_mosquitoFOI_matrix=x$spatial_mosquitoFOI_matrix,
-                                 spatial_type=x$spatial_type,
-                                 use_historic_interventions=x$use_historic_interventions,
-                                 human_only_full_save=x$human_only_full_save,
-                                 ibd_length=x$ibd_length,
-                                 num_loci=x$num_loci,
-                                 sample_states = x$sample_states,
-                                 update_length=x$update_length,
-                                 update_save=x$update_save,
-                                 human_update_save=x$human_update_save,
-                                 summary_saves_only=x$summary_saves_only,
-                                 housekeeping_list=x$housekeeping_list,
-                                 drug_list = x$drug_list,
-                                 nmf_list = x$nmf_list,
-                                 plaf = x$plaf,
-                                 island_imports_plaf_linked_flag = x$island_imports_plaf_linked_flag))
+        return(magenta::pipeline(
+          EIR = x$EIR,
+          seed = as.integer(runif(1, 1, 1000000000)),
+          save_lineages = x$save_lineages,
+          N = x$N,
+          mutation_rate = x$mutation_rate,
+          mutation_flag = x$mutation_flag,
+          sample_size = x$sample_size,
+          sample_reps = x$sample_reps,
+          years = x$years,
+          survival_percentage = x$survival_percentage,
+          itn_cov = x$itn_cov,
+          irs_cov = x$irs_cov,
+          ft = x$ft,
+          genetics_df_without_summarising = x$genetics_df_without_summarising,
+          spatial_incidence_matrix = x$spatial_incidence_matrix,
+          spatial_mosquitoFOI_matrix = x$spatial_mosquitoFOI_matrix,
+          spatial_type = x$spatial_type,
+          use_historic_interventions = x$use_historic_interventions,
+          human_only_full_save = x$human_only_full_save,
+          ibd_length = x$ibd_length,
+          num_loci = x$num_loci,
+          sample_states = x$sample_states,
+          update_length = x$update_length,
+          update_save = x$update_save,
+          human_update_save = x$human_update_save,
+          summary_saves_only = x$summary_saves_only,
+          housekeeping_list = x$housekeeping_list,
+          drug_list = x$drug_list,
+          nmf_list = x$nmf_list,
+          plaf = x$plaf,
+          island_imports_plaf_linked_flag = x$island_imports_plaf_linked_flag
+        ))
       },
-      name = paste0("chaibank_linked_0_rep_", rep), overwrite = TRUE)
+      name = paste0("chaibankmu_linked_0_rep_", rep), overwrite = TRUE)
   )
 
 }
 
+# clear those from queue that need extra cores
+rrq <- obj$rrq_controller()
+ql <- rrq$queue_list()
+tid <- unlist(lapply(ql, function(x){(rrq$task_data(x)$expr %>% as.list)$task_id}))
+eirs <- vapply(tid, function(x){as.list(obj$task_get(x)$expr())[[2]]$EIR}, numeric(1))
+rrq$queue_remove(ql[which(eirs>197)])
+
+# now submit workers
+workers <- obj$submit_workers(600)
+
+# and get the grp list here
 grps <- lapply(obj$task_bundle_list(), function(x){obj$task_bundle_get(x)})
 
 
-
+# resubmit those that errored or were not submitted in the first place
 for(i in seq_along(grps)) {
   st <- grps[[i]]$status()
-  if(any(st == "ERROR")) {
-  obj$submit(grps[[i]]$ids[as.integer(which(st == "ERROR"))])
+  if(any(st == "ERROR" )) {
+    obj$submit(grps[[i]]$ids[as.integer(which(st == "ERROR"))])
+  }
+  if(any(st == "PENDING" )) {
+    obj$submit(grps[[i]]$ids[as.integer(which(st == "PENDING"))])
   }
 }
 
 ## ----------------------------------------------------o
 ## 4. Fetch Objects --------------
-## ----------------------------------------------------
+## ----------------------------------------------------o
 
 # let's put our sim outputs here
 dir.create(here::here("analysis/data-derived/sims"))
@@ -239,6 +254,7 @@ for(i in seq_along(X)) {
   fn_i <- paste0("r_", i, ".rds")
   saveRDS(r_i, here::here("analysis/data-derived/sims", fn_i))
   gc()
+
 
 }
 
