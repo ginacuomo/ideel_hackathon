@@ -49,8 +49,10 @@ R6_res_mod <- R6::R6Class(
     #' @param ft Treatment Coverage
     #' @param micro210 Microscopy 2-10 prevalence
     #' @param s_name Name of the selection coefficient to be predicted
+    #' @param f1 Name of the selection coefficient to be predicted
+    #' @param f2 Name of the selection coefficient to be predicted
     #' @return Data.frame of selection coefficients and times from 1% to 5%
-    predict = function(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210, s_name) {
+    predict = function(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210, s_name, f1 = 0.01, f2 = 0.05, sd_scale = 3.3) {
 
       # get args and turn into matrix
       dat <- cbind(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210)
@@ -63,13 +65,13 @@ R6_res_mod <- R6::R6Class(
       # We estimated error using only 10 stochastic realisations. If we had used
       # 100 realisations, bsaed on a simple model of normally distributed variance
       # it would be 3.3 times smaller. Consequently, divide by 3.3.
-      ret[[paste0(s_name, "_min")]] <- ret[[s_name]] - 1.96*(err/3.3)
-      ret[[paste0(s_name, "_max")]] <- ret[[s_name]] + 1.96*(err/3.3)
+      ret[[paste0(s_name, "_min")]] <- ret[[s_name]] - 1.96*(err/sd_scale)
+      ret[[paste0(s_name, "_max")]] <- ret[[s_name]] + 1.96*(err/sd_scale)
 
       # use to calculate times
-      ret[[paste0("t", "_", s_name)]] <- (log(0.05 / (1 - 0.05)) - log(0.01 / (1 - 0.01))) / ret[[s_name]]
-      ret[[paste0("t", "_", s_name, "_min")]] <- (log(0.05 / (1 - 0.05)) - log(0.01 / (1 - 0.01))) / ret[[paste0(s_name, "_min")]]
-      ret[[paste0("t", "_", s_name, "_max")]] <- (log(0.05 / (1 - 0.05)) - log(0.01 / (1 - 0.01))) / ret[[paste0(s_name, "_max")]]
+      ret[[paste0("t", "_", s_name)]] <- (log(f2 / (1 - f2)) - log(f1 / (1 - f1))) / ret[[s_name]]
+      ret[[paste0("t", "_", s_name, "_max")]] <- (log(f2 / (1 - f2)) - log(f1 / (1 - f1))) / ret[[paste0(s_name, "_min")]]
+      ret[[paste0("t", "_", s_name, "_min")]] <- (log(f2 / (1 - f2)) - log(f1 / (1 - f1))) / ret[[paste0(s_name, "_max")]]
 
       return(ret)
 
@@ -92,11 +94,11 @@ R6_res_mod <- R6::R6Class(
     #' @param dat Data frame of covariates
     #' @param s_name Name of the selection coefficient to be predicted
     predict_err = function(dat, s_name) {
-      private$predict_internal(dat,
+      exp(private$predict_error_internal(dat,
                                private$err_models,
                                private$err_model_weights,
                                private$err_model_predict_f,
-                               s_name)
+                               s_name))
     },
 
     # Predict t
@@ -171,7 +173,7 @@ R6_res_mod <- R6::R6Class(
     },
 
     #' Add model weights
-    #' @param weight Selection prediction model weight (RMSE)
+    #' @param weight Model for predicting weights (error) for each model
     #' @param model_name Name of model
     #' @param s_name Name of the selection coefficient the weights relates to
     add_model_weight = function(weight, model_name, s_name) {
@@ -199,7 +201,7 @@ R6_res_mod <- R6::R6Class(
       private$err_model_predict_f[[model_name]] <- f
     },
 
-    #' @param weight Selection error prediction model weight (RMSE)
+    #' @param weight Model for predicting weights (error) for each err model
     #' @param model_name Name of model
     #' @param s_name Name of the selection coefficient the weights relates to
     add_err_model_weight = function(weight, model_name, s_name) {
@@ -283,7 +285,55 @@ R6_res_mod <- R6::R6Class(
     # Predict Generic
     predict_internal = function(dat, models, weights, predict_f, s_name) {
 
-      # get our models and their weights
+      # get our models
+      model_names <- names(models[[s_name]])
+
+      # and our err models
+      model_errs <- weights[[s_name]][model_names]
+
+      # set up our data removing NA rows
+      dat <- as.data.frame(
+        dat[, c("al", "asaq", "dhappq", "art_res", "ppq_res",
+                "aq_res", "lu_res", "ft", "micro210")]
+      )
+      dat_na <- na.omit(dat)
+      dat_namat <- as.matrix(dat_na)
+
+      # make prediction for each model
+      predictions <- vapply(
+        lapply(model_names, function(x) {
+          predict_f[[x]](models[[s_name]][[x]], dat_namat, s_name)
+        }),
+        as.numeric,
+        FUN.VALUE = numeric(nrow(dat_namat))
+      )
+
+      # make prediction of error for each model
+      errs <- vapply(
+        lapply(model_names, function(x) {
+          predict(model_errs[[x]], dat_namat)
+        }),
+        as.numeric,
+        FUN.VALUE = numeric(nrow(dat_namat))
+      )
+
+      # Catch for when you are only requesting on one row of data
+      if(!is.matrix(predictions)) {
+        ensemb <- mean(predictions + errs)
+      } else {
+        ensemb <- apply(predictions + errs, MARGIN = 1, mean)
+      }
+
+      # return values with NAs in for missing data
+      ret <- rep(NA, nrow(dat))
+      ret[as.integer(which(apply(dat, 1, function(x){all(!is.na(x))})))] <- ensemb
+      return(ret)
+    },
+
+    # Predict Generic
+    predict_error_internal = function(dat, models, weights, predict_f, s_name) {
+
+      # get our models
       model_names <- names(models[[s_name]])
       model_weights <- 1 / as.numeric(weights[[s_name]][model_names])
       normalised_weights <- model_weights / sum(model_weights)
@@ -296,7 +346,7 @@ R6_res_mod <- R6::R6Class(
       dat_na <- na.omit(dat)
       dat_namat <- as.matrix(dat_na)
 
-      # make ensemble prediction
+      # make prediction for each model
       predictions <- vapply(
         lapply(model_names, function(x) {
           predict_f[[x]](models[[s_name]][[x]], dat_namat, s_name)
@@ -319,3 +369,18 @@ R6_res_mod <- R6::R6Class(
     }
   )
 )
+
+#' @noRd
+create_res_mod_from_res_mod <- function(res_mod){
+
+  R6_res_mod$new(
+    data = res_mod$get_data(),
+    models = res_mod$get_models(),
+    err_models = res_mod$get_err_models(),
+    model_weights = res_mod$get_model_weights(),
+    err_model_weights = res_mod$get_err_model_weights(),
+    model_predict_f = res_mod$get_model_predict_f(),
+    err_model_predict_f = res_mod$get_err_model_predict_f()
+  )
+
+}
