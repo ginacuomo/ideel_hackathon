@@ -1,6 +1,9 @@
-#' R6 Class for antimalarial resistance model
+#' @title R6 Class for antimalarial resistance model
 #'
-#' Model for predicting the selective coefficients for antimalarial resistance
+#' @description Antimalarial resistance model emulator
+#'
+#' @importFrom R6 R6Class
+#'
 R6_res_mod <- R6::R6Class(
   classname = "res_mod",
   cloneable = FALSE,
@@ -49,8 +52,9 @@ R6_res_mod <- R6::R6Class(
     #' @param ft Treatment Coverage
     #' @param micro210 Microscopy 2-10 prevalence
     #' @param s_name Name of the selection coefficient to be predicted
-    #' @param f1 Name of the selection coefficient to be predicted
-    #' @param f2 Name of the selection coefficient to be predicted
+    #' @param f1 Starting frequency of mutation
+    #' @param f2 Ending frequency of mutation
+    #' @param sd_scale Scaling factor for sd based estimation of CI.
     #' @return Data.frame of selection coefficients and times from 1% to 5%
     predict = function(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210, s_name, f1 = 0.01, f2 = 0.05, sd_scale = 3.3) {
 
@@ -384,3 +388,4 @@ create_res_mod_from_res_mod <- function(res_mod){
   )
 
 }
+

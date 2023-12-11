@@ -4,12 +4,7 @@
 \alias{R6_res_mod}
 \title{R6 Class for antimalarial resistance model}
 \description{
-R6 Class for antimalarial resistance model
-
-R6 Class for antimalarial resistance model
-}
-\details{
-Model for predicting the selective coefficients for antimalarial resistance
+Antimalarial resistance model emulator
 }
 \section{Methods}{
 \subsection{Public methods}{
@@ -98,7 +93,10 @@ Predict median and 95\% selection coefficients and threshold times
   lu_res,
   ft,
   micro210,
-  s_name
+  s_name,
+  f1 = 0.01,
+  f2 = 0.05,
+  sd_scale = 3.3
 )}\if{html}{\out{</div>}}
 }
 
@@ -124,6 +122,12 @@ Predict median and 95\% selection coefficients and threshold times
 \item{\code{micro210}}{Microscopy 2-10 prevalence}
 
 \item{\code{s_name}}{Name of the selection coefficient to be predicted}
+
+\item{\code{f1}}{Starting frequency of mutation}
+
+\item{\code{f2}}{Ending frequency of mutation}
+
+\item{\code{sd_scale}}{Scaling factor for sd based estimation of CI.}
 }
 \if{html}{\out{</div>}}
 }
@@ -267,7 +271,7 @@ Add model weights}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{weight}}{Selection prediction model weight (RMSE)}
+\item{\code{weight}}{Model for predicting weights (error) for each model}
 
 \item{\code{model_name}}{Name of model}
 
@@ -327,7 +331,7 @@ Add model error prediction function}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{weight}}{Selection error prediction model weight (RMSE)}
+\item{\code{weight}}{Model for predicting weights (error) for each err model}
 
 \item{\code{model_name}}{Name of model}
 

@@ -28,6 +28,10 @@ Imports:
     purrr,
     spdep,
     magenta
+Suggests:
+    knitr,
+    rmarkdown,
+    testthat
 Remotes:
     OJWatson/magenta
 URL: https://ojwatson.github.io/arms/
