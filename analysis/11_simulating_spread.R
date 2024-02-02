@@ -326,9 +326,9 @@ central_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   mutate(t_med = round(replace(t, is.na(t) & iso %in% isos, Inf),2),
          t_uci = round(replace(tmin, is.na(t) & iso %in% isos, Inf),2),
          t_lci = round(replace(tmax, is.na(t) & iso %in% isos, Inf),2),
-         s_med = s,
-         s_lci = s_min,
-         s_uci = s_max,
+         s_med = round(s,4),
+         s_lci = round(s_min,4),
+         s_uci = round(s_max,4),
          scenario = "Central") %>%
   mutate(t_med = replace(t_med, t_med>40, "40+"),
          t_uci = replace(t_uci, t_uci>40, "40+"),
@@ -336,7 +336,7 @@ central_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 worst_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   filter(micro210_scen == "low" & ft_scen == "high" & al_scen == "high", res_scen == "high") %>%
@@ -346,9 +346,9 @@ worst_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   mutate(t_med = round(replace(t, is.na(t) & iso %in% isos, Inf),2),
          t_uci = round(replace(tmin, is.na(t) & iso %in% isos, Inf),2),
          t_lci = round(replace(tmax, is.na(t) & iso %in% isos, Inf),2),
-         s_med = s,
-         s_lci = s_min,
-         s_uci = s_max,
+         s_med = round(s,4),
+         s_lci = round(s_min,4),
+         s_uci = round(s_max,4),
          scenario = "Pessimistic") %>%
   mutate(t_med = replace(t_med, t_med>40, "40+"),
          t_uci = replace(t_uci, t_uci>40, "40+"),
@@ -356,7 +356,7 @@ worst_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   filter(micro210_scen == "high" & ft_scen == "low" & al_scen == "low", res_scen == "low") %>%
@@ -366,9 +366,9 @@ best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   mutate(t_med = round(replace(t, is.na(t) & iso %in% isos, Inf),2),
          t_uci = round(replace(tmin, is.na(t) & iso %in% isos, Inf),2),
          t_lci = round(replace(tmax, is.na(t) & iso %in% isos, Inf),2),
-         s_med = s,
-         s_lci = s_min,
-         s_uci = s_max,
+         s_med = round(s,4),
+         s_lci = round(s_min,4),
+         s_uci = round(s_max,4),
          scenario = "Optimistic") %>%
   mutate(t_med = replace(t_med, t_med>40, "40+"),
          t_uci = replace(t_uci, t_uci>40, "40+"),
@@ -376,7 +376,7 @@ best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 write.csv(central_df, "analysis/data-out/central_times_prospective.csv", row.names = FALSE)
 write.csv(worst_df, "analysis/data-out/pessimistic_times_prospective.csv", row.names = FALSE)
