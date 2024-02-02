@@ -273,7 +273,11 @@ R6_res_mod <- R6::R6Class(
 
     #' Set data the models were trained on
     #' @param data Training data for models
-    set_data = function(data) { private$data <- data }
+    set_data = function(data) { private$data <- data },
+
+    #' Set s adjustment
+    #' @param s_adj Adjustment for s (NMF fix)
+    set_s_adj = function(s_adj) { private$s_adj <- s_adj }
 
   ),
 
@@ -285,6 +289,7 @@ R6_res_mod <- R6::R6Class(
     model_weights = NULL,
     err_model_weights = NULL,
     data = NULL,
+    s_adj = 1,
 
     # Predict Generic
     predict_internal = function(dat, models, weights, predict_f, s_name) {
@@ -331,6 +336,10 @@ R6_res_mod <- R6::R6Class(
       # return values with NAs in for missing data
       ret <- rep(NA, nrow(dat))
       ret[as.integer(which(apply(dat, 1, function(x){all(!is.na(x))})))] <- ensemb
+
+      # adjust s (temp fix for NMF)
+      ret <- ret * private$s_adj
+
       return(ret)
     },
 
@@ -369,6 +378,7 @@ R6_res_mod <- R6::R6Class(
       # return values with NAs in for missing data
       ret <- rep(NA, nrow(dat))
       ret[as.integer(which(apply(dat, 1, function(x){all(!is.na(x))})))] <- ensemb
+
       return(ret)
     }
   )

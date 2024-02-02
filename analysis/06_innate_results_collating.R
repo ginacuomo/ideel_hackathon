@@ -37,18 +37,21 @@ compl_df <- compl_df %>%
 
 saveRDS(compl_df, "analysis/data-derived/complete_times.rds")
 
-# Times censored at 60 years
-tlim <- 60
-tlim_text <- "60+"
+# Times censored at 40 years
+tlim <- 40
+tlim_text <- "40+"
 central_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   filter(if_all(ends_with("scen"), ~ . == "med")) %>%
   filter(!(iso %in% c("ATF", "UMI"))) %>%
   mutate(continent = countrycode::countrycode(iso, "iso3c", "continent"), .before = 1) %>%
   na.omit %>%
-  select(continent:t_max) %>%
+  select(continent:s_max) %>%
   mutate(t_med = round(replace(t, t<0, Inf),2),
          t_lci = round(replace(t_min, t_min<0, Inf),2),
          t_uci = round(replace(t_max, t_max<0, Inf),2),
+         s_med = s,
+         s_lci = s_min,
+         s_uci = s_max,
          scenario = "Central") %>%
   mutate(t_med = replace(t_med, t_med>tlim, tlim_text),
          t_uci = replace(t_uci, t_uci>tlim, tlim_text),
@@ -56,17 +59,20 @@ central_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 worst_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   filter(micro210_scen == "low" & ft_scen == "high" & al_scen == "high") %>%
   filter(!(iso %in% c("ATF", "UMI"))) %>%
   mutate(continent = countrycode::countrycode(iso, "iso3c", "continent"), .before = 1) %>%
   na.omit %>%
-  select(continent:t_max) %>%
+  select(continent:s_max) %>%
   mutate(t_med = round(replace(t, t<0, Inf),2),
          t_lci = round(replace(t_min, t_min<0, Inf),2),
          t_uci = round(replace(t_max, t_max<0, Inf),2),
+         s_med = s,
+         s_lci = s_min,
+         s_uci = s_max,
          scenario = "Pessimistic") %>%
   mutate(t_med = replace(t_med, t_med>tlim, tlim_text),
          t_uci = replace(t_uci, t_uci>tlim, tlim_text),
@@ -74,17 +80,20 @@ worst_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   filter(micro210_scen == "high" & ft_scen == "low" & al_scen == "low") %>%
   filter(!(iso %in% c("ATF", "UMI"))) %>%
   mutate(continent = countrycode::countrycode(iso, "iso3c", "continent"), .before = 1) %>%
   na.omit %>%
-  select(continent:t_max) %>%
+  select(continent:s_max) %>%
   mutate(t_med = round(replace(t, t<0, Inf),2),
          t_lci = round(replace(t_min, t_min<0, Inf),2),
          t_uci = round(replace(t_max, t_max<0, Inf),2),
+         s_med = s,
+         s_lci = s_min,
+         s_uci = s_max,
          scenario = "Pessimistic") %>%
   mutate(t_med = replace(t_med, t_med>tlim, tlim_text),
          t_uci = replace(t_uci, t_uci>tlim, tlim_text),
@@ -92,7 +101,7 @@ best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
   rename(admin_0 = name_0) %>%
   rename(admin_1 = name_1) %>%
   arrange(continent, iso,  admin_1) %>%
-  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, scenario)
+  select(continent, iso, admin_0, admin_1, t_lci, t_med, t_uci, s_lci, s_med, s_uci, scenario)
 
 write.csv(central_df, here::here("analysis/data-out/central_times.csv"), row.names = FALSE)
 write.csv(worst_df, here::here("analysis/data-out/pessimistic_times.csv"), row.names = FALSE)

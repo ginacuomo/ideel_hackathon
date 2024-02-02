@@ -1,7 +1,7 @@
 library(tidyverse)
 
 # ---------------------------------------------------- o
-# 2. Get the world map and merge together with our covariate ranges ----
+# 1. Get the world map and merge together with our covariate ranges ----
 # ---------------------------------------------------- o
 
 # Grab our covariate parameter ranges
@@ -33,7 +33,7 @@ scenarios <- lapply(drugs, function(x){
   unique
 
 # ---------------------------------------------------- o
-# 2. Estimate times to 25% for each scenario worldwide ----
+# 2. Estimate times to 10% for each scenario worldwide ----
 # ---------------------------------------------------- o
 
 # make scenario map data
@@ -72,25 +72,25 @@ for(i in seq_along(map_data)) {
   # art_res <- case_when(scenarios$art_res[i] == "med" ~ 0.01,
   #                      scenarios$art_res[i] == "low" ~ 0.01,
   #                      scenarios$art_res[i] == "high" ~ 0.01)
-  art_res <- 0.05
+  art_res <- 0.01
 
   # ppq_res <- case_when(scenarios$pd_res[i] == "med" ~ 0.001,
   #                      scenarios$pd_res[i] == "low" ~ 0.001,
   #                      scenarios$pd_res[i] == "high" ~ 0.001)
-  ppq_res <- 0.05
+  ppq_res <- 0.01
 
   # aq_res <- case_when(scenarios$pd_res[i] == "med" ~ 0.001,
   #                      scenarios$pd_res[i] == "low" ~ 0.001,
   #                      scenarios$pd_res[i] == "high" ~ 0.001)
-  aq_res <- 0.05
+  aq_res <- 0.01
 
   # lu_res <- case_when(scenarios$pd_res[i] == "med" ~ 0.001,
   #                      scenarios$pd_res[i] == "low" ~ 0.001,
   #                      scenarios$pd_res[i] == "high" ~ 0.001)
-  lu_res <- 0.05
+  lu_res <- 0.01
 
   map_data[[i]] <- res_mod$predict(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft,
-                                   micro210, "s_a_5", f1 = 0.05, f2 = 0.25)
+                                   micro210, "s_a_5", f1 = 0.01, f2 = 0.10)
   map_data[[i]] <- map_data[[i]] %>%
     mutate(id_1 = covars$id_1, .before = 1) %>%
     mutate(iso3c = covars$iso3c, .before = 1)
@@ -115,7 +115,7 @@ scenario_maps <- readRDS("analysis/data-derived/scenario_maps_full.rds")
 isos <- unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"])
 # range of scenarios c(7,14,21)
 
-create_comb_plot <- function(scen = 14, lablet = c("A","B")){
+create_comb_plot <- function(scen = 14, lablet = c("A","B"), top = 0.51, t_top = 80){
 
   world <- left_join(world_map, map_data[[scen]]) %>%
     filter(iso %in% isos) %>%
@@ -125,8 +125,8 @@ create_comb_plot <- function(scen = 14, lablet = c("A","B")){
 gg_map_s <- world %>% filter(!is.na(s_a_5)) %>%
   ggplot() +
   geom_sf(aes(fill = s_a_5), color = NA, show.legend = TRUE) +
-  scale_fill_viridis_c(name = "Selection \nCoefficient\n", option = "A", direction = 1, values = c(0,0.3, 1), limits = c(0,0.3),
-                       breaks = c(0,0.1,0.2,0.3)) +
+  scale_fill_viridis_c(name = "Selection \nCoefficient\n", option = "A", direction = 1, values = c(0,0.3, 1), limits = c(0,top),
+                       breaks = seq(0, 0.5, 0.1), ) +
   theme_bw()
 
 gg_map_s <- gg_map_s +
@@ -142,8 +142,8 @@ gg_map_s <- gg_map_s +
 gg_map_t <- world %>% filter(!is.na(s_a_5)) %>%
   ggplot() +
   geom_sf(aes(fill = t_s_a_5), color = NA, show.legend = TRUE) +
-  scale_fill_viridis_c(name = "Time for ArtR\n5% → 25%\n", option = "C", direction = -1,
-                       trans = "log", breaks = c(10,20,40,80, 160), limits = c(7,120)) +
+  scale_fill_viridis_c(name = "Years for ArtR\n1% → 10%\n", option = "C", direction = -1,
+                       trans = "log", breaks = c(5, 10,20,40,t_top), limits = c(5,t_top)) +
   theme_bw()
 
 gg_map_t <- gg_map_t +
