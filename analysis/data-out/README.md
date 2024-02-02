@@ -26,3 +26,7 @@ In all the outputs above, the **central** times provide the estimated times base
 The **optimistic** times assume the upper or lower estimate value for each parameter (depending on the direction of its effect on selection) such that the selection of ArtR will increase at its slowest. Conversely, the **pessimistic** times assume the upper or lower value for each parameter (depending on the direction of its effect on selection) such that the selection of ArtR will increase at its fastest.
 
 Lastly, the uncertainty provided in each of the files, reflects the uncertainty that arises from our use of a stochastic, individual based model for the selection of ArtR. 
+
+### Shape Files
+
+The linked shape files for these outputs are in `shape_files/`. The admin level 0 and admin level 1 shape files are provided, both as a saved R object (`.rds`) and as a shape file (`.shp`). To link these with the risk outputs, these can be matched using `id_1`.

@@ -382,3 +382,11 @@ write.csv(central_df, "analysis/data-out/central_times_prospective.csv", row.nam
 write.csv(worst_df, "analysis/data-out/pessimistic_times_prospective.csv", row.names = FALSE)
 write.csv(best_df, "analysis/data-out/optimistic_times_prospective.csv", row.names = FALSE)
 
+# and out put the shape files
+dir.create("analysis/data-out/shape_files")
+afr_map_full <- readRDS(here::here("analysis/data-derived/map_for_CAR.rds"))
+saveRDS(afr_map_full %>% select(iso:country_level), "analysis/data-out/shape_files/admin1.rds")
+sf::write_sf(afr_map_full %>% select(iso:country_level), "analysis/data-out/shape_files/admin1.shp")
+saveRDS(map_0, "analysis/data-out/shape_files/admin0.rds")
+sf::write_sf(map_0, "analysis/data-out/shape_files/admin0.shp")
+
