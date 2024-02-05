@@ -94,7 +94,7 @@ best_df <- compl_df %>% group_by(iso, name_0, name_1) %>%
          s_med = round(s,4),
          s_lci = round(s_min,4),
          s_uci = round(s_max,4),
-         scenario = "Pessimistic") %>%
+         scenario = "Optimistic") %>%
   mutate(t_med = replace(t_med, t_med>tlim, tlim_text),
          t_uci = replace(t_uci, t_uci>tlim, tlim_text),
          t_lci = replace(t_lci, t_lci>tlim, tlim_text)) %>%
