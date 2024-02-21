@@ -16,7 +16,7 @@ isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$contine
 map_0 <- malariaAtlas::getShp(ISO = isos, admin_level = c("admin0")) %>% sf::st_as_sf()
 
 # Get the selection model object
-res_mod <- readRDS(here::here("analysis/data-derived/res_mod.rds"))
+res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))
 
 # Get the scenario maps
 scenario_maps <- readRDS(here::here("analysis/data-derived/scenario_maps_full.rds"))
@@ -82,7 +82,6 @@ aq_res_q <- (crt76T_q*mdr86Y_q) %>%
 # convert into resistance frequency
 lu_res_q <- (mdr184F_q*mdrCNV_q) %>%
   apply(2, quantile, c(0.025,0.5,0.975))
-
 
 
 # loop over and generate selection and times
@@ -163,7 +162,7 @@ spread_model$set_seeds(setNames(seeds_adm1$k13_valid_q_50, seeds_adm1$id_1))
 spread_model$set_map_data(map_data[[which(apply(scenarios, 1, function(x){all(x == "med")}))]] %>% filter(id_1 %in% afr_map$id_1))
 
 # Simulate our data
-out <- spread_model$simulate_spread(export_freq = 0.1, t_break = 0.1, s_name =  "s_a_5")
+out <- spread_model$simulate_spread(export_freq = 0.25, t_break = 0.1, s_name =  "s_a_5")
 
 # set up parallel cluster here
 n.cores <- 8
@@ -258,7 +257,7 @@ out_plots <- furrr::future_map(seq_along(unique(out$t)), function(i) {
 
   x <- unique(out$t)[i]
   gg_x <-
-    map_obj$.__enclos_env__$private$map %>% filter(id_1 %in% out$id_1) %>%
+    afr_map %>% filter(id_1 %in% out$id_1) %>%
     left_join(out %>% filter(t == x) %>% select(-t) %>% rename(t = freq)) %>%
     ggplot() +
     geom_sf(aes(fill = t), color = "grey", show.legend = TRUE, lwd = 0.1) +
@@ -266,9 +265,9 @@ out_plots <- furrr::future_map(seq_along(unique(out$t)), function(i) {
             data = map_0 %>% filter(iso %in% isos), lwd = 0.2) +
     coord_sf() +
     theme_void(base_size = 16) +
-    ggtitle(as.integer(2023+x)) +
+    ggtitle(as.integer(2020+x)) +
     theme(plot.caption = element_text(face = "italic"), plot.background = element_rect(fill = "white", color = "white")) +
-    scale_fill_viridis_c(name = "False negative HRP2-RDTs \namongst clinical infections \ndue to pfhrp2/3 deletions\n",
+    scale_fill_viridis_c(name = "K13 Mutation Frequency (%)",
                          labels = scales::percent, limits = c(0,1)) +
     theme(plot.title = element_text(hjust = 0.5),
           legend.key.height = unit(1, "inch"),
@@ -276,13 +275,13 @@ out_plots <- furrr::future_map(seq_along(unique(out$t)), function(i) {
           legend.text = element_text(size = 14),
           legend.title.align = 0)
 
-  hrpup:::save_figs(paste0("test_",sprintf("%03d",i)), fig = gg_x,
+  arms:::save_figs(paste0("test_",sprintf("%03d",i)), fig = gg_x,
                     width = 12, height = 12, pdf_plot = FALSE, plot_dir = "analysis/plots/time_series/",
                     font_family = "Helvetica")
 
   return(1L)
 
-}, .progress = TRUE, .options = furrr_options(packages = "hrpup"))
+}, .progress = TRUE, .options = furrr_options(packages = "arms"))
 parallel::stopCluster(my.cluster)
 
 # Make a movie of these
