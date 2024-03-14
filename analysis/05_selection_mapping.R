@@ -10,7 +10,7 @@ isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$contine
 covars <- filter(covars, iso3c %in% isos)
 
 # Get our selection model
-res_mod <- readRDS("analysis/data-derived/res_mod.rds")
+res_mod <- readRDS("analysis/data-derived/res_nmf_mod.rds")
 
 # MAP world map to
 world_map <- malariaAtlas::getShp(ISO = na.omit(unique(covars$iso3c)), admin_level = c("admin1")) %>% sf::st_as_sf()
@@ -89,10 +89,17 @@ for(i in seq_along(map_data)) {
   #                      scenarios$pd_res[i] == "high" ~ 0.001)
   lu_res <- 0.01
 
-  map_data[[i]] <- res_mod$predict(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft,
-                                   micro210, "s_a_5", f1 = 0.01, f2 = 0.10)
+  # Loop over each allele and generate the selection coefficient
+  map_data[[i]] <- map(
+    paste0("s_a_",1:6),
+    function(x){
+      res_mod$predict(al, asaq, dhappq, art_res, ppq_res, aq_res, lu_res, ft,
+                      micro210, x, f1 = 0.01, f2 = 0.10) %>% mutate(id_1 = covars$id_1, .before = 1)
+    }) %>%
+    purrr::reduce(left_join, by = c("al","asaq","dhappq","art_res","ppq_res","aq_res","lu_res","ft","micro210","id_1"))
+
+
   map_data[[i]] <- map_data[[i]] %>%
-    mutate(id_1 = covars$id_1, .before = 1) %>%
     mutate(iso3c = covars$iso3c, .before = 1)
 }
 

@@ -198,7 +198,7 @@ out_all <- furrr::future_map(map_data, function(x){
 
 }, .progress = TRUE, .options = furrr_options(packages = "arms"))
 parallel::stopCluster(my.cluster)
-
+private$simulate_selection(t = t, res_pos = res_pos_list[[t]], s_name = s_name)
 # --------------------------------------------------------------------------#
 # 3. Plot our spread -----------------------------------------------------
 # --------------------------------------------------------------------------#
