@@ -21,6 +21,7 @@ R6_res_mod <- R6::R6Class(
     #' @param model_predict_f Functions to make prediction for specific model
     #' @param err_model_predict_f Functions to make prediction for specific error model
     #' @param data Data used originally for model training
+    #' @param test_data Data used originally for model training
     #' @return A new `res_mod` object.
     initialize = function(models = list(),
                           err_models  = list(),
@@ -28,7 +29,8 @@ R6_res_mod <- R6::R6Class(
                           err_model_weights = list(),
                           model_predict_f = list(),
                           err_model_predict_f = list(),
-                          data = data.frame()) {
+                          data = data.frame(),
+                          test_data = data.frame()) {
 
       private$models <- models
       private$err_models <- err_models
@@ -37,6 +39,7 @@ R6_res_mod <- R6::R6Class(
       private$model_predict_f <- model_predict_f
       private$err_model_predict_f <- err_model_predict_f
       private$data <- data
+      private$test_data <- test_data
 
     },
 
@@ -245,6 +248,11 @@ R6_res_mod <- R6::R6Class(
     #' @return Training data
     get_data = function() private$data,
 
+    #' Get the hold out test data from model training
+    #' @return Training data
+    get_test_data = function() private$test_data,
+
+
     # SETTERS
 
     #' Set all selection prediction models
@@ -275,6 +283,10 @@ R6_res_mod <- R6::R6Class(
     #' @param data Training data for models
     set_data = function(data) { private$data <- data },
 
+    #' Set hold out test data from model training
+    #' @param test_data Training data for models
+    set_test_data = function(test_data) { private$test_data <- test_data },
+
     #' Set s adjustment
     #' @param s_adj Adjustment for s (NMF fix)
     set_s_adj = function(s_adj) { private$s_adj <- s_adj }
@@ -289,6 +301,7 @@ R6_res_mod <- R6::R6Class(
     model_weights = NULL,
     err_model_weights = NULL,
     data = NULL,
+    test_data = NULL,
     s_adj = 1,
 
     # Predict Generic
@@ -389,6 +402,7 @@ create_res_mod_from_res_mod <- function(res_mod){
 
   R6_res_mod$new(
     data = res_mod$get_data(),
+    test_data = res_mod$get_test_data(),
     models = res_mod$get_models(),
     err_models = res_mod$get_err_models(),
     model_weights = res_mod$get_model_weights(),

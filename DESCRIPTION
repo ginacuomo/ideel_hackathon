@@ -25,7 +25,9 @@ Imports:
     R6,
     purrr,
     spdep,
-    magenta
+    magenta,
+    ragg,
+    dplyr
 Suggests:
     knitr,
     rmarkdown,

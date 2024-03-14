@@ -73,10 +73,10 @@ library(elasticnet)
 # Load data
 # Set up training and testing data
 
-train_xgboost <- function(s = "s_a_5", eta = c(0.05,0.1,0.2), subsample = 1, colsample_bytree = c(1),
-                          nrounds = c(200), max_depth = c(50), train){
+train_xgboost <- function(s = "s_a_5", eta = c(0.05), subsample = 0.66, colsample_bytree = c(0.66),
+                          nrounds = c(200), max_depth = c(6), nfold = 5, train){
 
-  train_control <- caret::trainControl(method="repeatedcv", number=5, repeats = 10)
+  train_control <- caret::trainControl(method="repeatedcv", number=nfold, repeats = 10)
   xgb_model <- caret::train(
     x = train %>% select(-starts_with("s")),
     y = train[[s]],
@@ -88,6 +88,37 @@ train_xgboost <- function(s = "s_a_5", eta = c(0.05,0.1,0.2), subsample = 1, col
                            "subsample" = subsample,
                            "colsample_bytree" = colsample_bytree,
                            "nrounds" = nrounds,
+                           "gamma" = c(0)),
+    monotone_constraints = mc_list[[s]])
+
+  xgb_params <- list(objective = "reg:squarederror",
+                     eta = xgb_model$results$eta[1],
+                     max_depth = xgb_model$results$max_depth[1],
+                     min_child_weight = 1,
+                     subsample = xgb_model$results$subsample[1],
+                     colsample_bytree = xgb_model$results$colsample_bytree[1])
+
+  # Train xgboost model with cross-validation
+  xgb_cv <- xgb.cv(params = xgb_params, data = as.matrix(train %>% select(-starts_with("s"))),
+                   label = train$s_a_5, nfold = nfold, verbose = 0, na.rm = TRUE,
+                   monotone_constraints = mc_list[[s]],
+                   nrounds = xgb_model$results$nrounds[1])
+
+  # Extract best iteration
+  best_iter <- which.min(xgb_cv$evaluation_log$test_rmse_mean)
+
+  # stop at best round
+  xgb_model <- caret::train(
+    x = train %>% select(-starts_with("s")),
+    y = train[[s]],
+    method="xgbTree",
+    trControl = train_control,
+    tuneGrid = expand.grid("eta" = xgb_model$results$eta[1],
+                           "max_depth" = xgb_model$results$max_depth[1],
+                           "min_child_weight" = c(1),
+                           "subsample" = xgb_model$results$subsample[1],
+                           "colsample_bytree" = xgb_model$results$colsample_bytree[1],
+                           "nrounds" = best_iter,
                            "gamma" = c(0)),
     monotone_constraints = mc_list[[s]])
 
