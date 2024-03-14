@@ -55,69 +55,37 @@ save_figs("model_prediction_summary_performance", mod_perf_gg, 6, 4, font_family
 
 
 # -------------------------------------------------------- #
-# 2. Relationship Testing ----
+# 2. Relationship Demonstration ----
 # -------------------------------------------------------- #
 
 # 1. Show plots of main ft drug relationships
-al <- 0.98
-asaq <- 0
+al <- c(0.6,0.8,1)
 dhappq <- 0
 art_res <- 0.01
 ppq_res <- 0.001
 aq_res <- 0.001
 lu_res <- 0.001
-ft <- seq(0.1,0.8,0.1)
-micro210 <- seq(0.00001, 0.8, 0.002)
+ft <- c(0.2,0.4, 0.8)
+micro210 <- seq(0.01, 0.8, 0.01)
 s_name <- "s_a_5"
-parm_grid <- expand.grid(al, asaq,dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210)
-colnames(parm_grid) <- c("al", "asaq","dhappq", "art_res", "ppq_res", "aq_res", "lu_res", "ft", "micro210")
-preddf <- res_mod$predict(parm_grid$al, parm_grid$asaq, parm_grid$dhappq, parm_grid$art_res,
-                          parm_grid$ppq_res, parm_grid$aq_res, parm_grid$lu_res, parm_grid$ft,
-                          parm_grid$micro210, s_name)
-preddf %>% ggplot(
-  aes(micro210, !!sym(s_name), color = as.factor(ft))
-) + geom_line()
+parm_grid <- expand.grid(al, dhappq, art_res, ppq_res, aq_res, lu_res, ft, micro210)
+colnames(parm_grid) <- c("al", "dhappq", "art_res", "ppq_res", "aq_res", "lu_res", "ft", "micro210")
+parm_grid <- parm_grid %>% mutate(asaq = 1-al, .after = 1)
+parm_grid$s_a_5 <- res_mod$get_model_predict_f()$monmlp(res_mod$get_models()$s_a_5$monmlp, parm_grid, s_name)
 
-preddf <- res_mod$predict_err(parm_grid, s_name)
-parm_grid %>% mutate(err = preddf) %>% ggplot(
-  aes(micro210, err, color = as.factor(ft))
-) + geom_line()
-
-
-
-# 2. Show plots of main ft drug relationships
-al <- c(0,0.25,0.5,0.75,1)
-asaq <- rev(c(0,0.25,0.5,0.75,1))
-dhappq <- 0
-art_res <- 0.01
-ppq_res <- 0.1
-aq_res <- 0.0
-lu_res <- 0.0
-ft <- 0.2
-micro210 <- seq(0.02, 0.9, 0.001)
-s_name <- "s_a_5"
-
-parm_grid <- data.frame(al, asaq,dhappq, art_res, ppq_res, aq_res, lu_res, ft)
-parm_grid <- do.call(rbind, lapply(micro210, function(x){parm_grid %>% mutate(micro210 = x)}))
-colnames(parm_grid) <- c("al", "asaq","dhappq", "art_res", "ppq_res", "aq_res", "lu_res", "ft", "micro210")
-
-preddf <- res_mod$predict(parm_grid$al, parm_grid$asaq, parm_grid$dhappq, parm_grid$art_res,
-                          parm_grid$ppq_res, parm_grid$aq_res, parm_grid$lu_res, parm_grid$ft,
-                          parm_grid$micro210, s_name)
-preddf %>% ggplot(
-  aes(micro210, s_a_5, color = as.factor(asaq))
-) +
-  geom_line()
+relation_gg <- parm_grid %>% ggplot(
+  aes(micro210, !!sym(s_name), color = as.factor(ft), linetype = as.factor(al), group = interaction(ft, al))
+) + geom_line() +
+  theme_bw() +
+  coord_equal(ratio = 2) +
+  MetBrewer::scale_color_met_d("Egypt", direction = -1, name = "Effective \nTreatment \nCoverage") +
+  scale_linetype(name = "Proportion \n of AL usage") +
+  guides(color = guide_legend(override.aes = list(alpha = 1))) +
+  ylab("Selection Coefficient") +
+  xlab("Slide Prevalence (2-10)")
 
 
-huh <- res_mod$get_model_predict_f()$monmlp(res_mod$get_models()$s_a_5$monmlp, parm_grid, "s_a_5")
-huh <- res_mod$get_model_predict_f()$xgb(res_mod$get_models()$s_a_5$xgb, parm_grid, "s_a_5")
-huh <- res_mod$get_model_predict_f()$brnn(res_mod$get_models()$s_a_5$brnn, parm_grid, "s_a_5")
-parm_grid %>% mutate(s_a_5 = huh) %>% ggplot(
-  aes(micro210, s_a_5, color = as.factor(ft))
-) +
-  geom_line()
-
+save_figs("emulator_relation", relation_gg, 6, 4, font_family = "Helvetica")
 
 # -------------------------------------------------------- #
 # 3. PDP Testing ----
