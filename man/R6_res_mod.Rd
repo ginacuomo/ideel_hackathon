@@ -28,6 +28,7 @@ Antimalarial resistance model emulator
 \item \href{#method-res_mod-get_model_weights}{\code{R6_res_mod$get_model_weights()}}
 \item \href{#method-res_mod-get_err_model_weights}{\code{R6_res_mod$get_err_model_weights()}}
 \item \href{#method-res_mod-get_data}{\code{R6_res_mod$get_data()}}
+\item \href{#method-res_mod-get_test_data}{\code{R6_res_mod$get_test_data()}}
 \item \href{#method-res_mod-set_models}{\code{R6_res_mod$set_models()}}
 \item \href{#method-res_mod-set_err_models}{\code{R6_res_mod$set_err_models()}}
 \item \href{#method-res_mod-set_model_predict_f}{\code{R6_res_mod$set_model_predict_f()}}
@@ -35,6 +36,8 @@ Antimalarial resistance model emulator
 \item \href{#method-res_mod-set_model_weights}{\code{R6_res_mod$set_model_weights()}}
 \item \href{#method-res_mod-set_err_model_weights}{\code{R6_res_mod$set_err_model_weights()}}
 \item \href{#method-res_mod-set_data}{\code{R6_res_mod$set_data()}}
+\item \href{#method-res_mod-set_test_data}{\code{R6_res_mod$set_test_data()}}
+\item \href{#method-res_mod-set_s_adj}{\code{R6_res_mod$set_s_adj()}}
 }
 }
 \if{html}{\out{<hr>}}
@@ -50,7 +53,8 @@ Create a new resistance selection model using emulators.
   err_model_weights = list(),
   model_predict_f = list(),
   err_model_predict_f = list(),
-  data = data.frame()
+  data = data.frame(),
+  test_data = data.frame()
 )}\if{html}{\out{</div>}}
 }
 
@@ -70,6 +74,8 @@ Create a new resistance selection model using emulators.
 \item{\code{err_model_predict_f}}{Functions to make prediction for specific error model}
 
 \item{\code{data}}{Data used originally for model training}
+
+\item{\code{test_data}}{Data used originally for model training}
 }
 \if{html}{\out{</div>}}
 }
@@ -429,6 +435,19 @@ Get data the models were trained on
 
 \subsection{Returns}{
 Training data
+Get the hold out test data from model training
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-res_mod-get_test_data"></a>}}
+\if{latex}{\out{\hypertarget{method-res_mod-get_test_data}{}}}
+\subsection{Method \code{get_test_data()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{R6_res_mod$get_test_data()}\if{html}{\out{</div>}}
+}
+
+\subsection{Returns}{
+Training data
 Set all selection prediction models
 }
 }
@@ -545,7 +564,41 @@ Set data the models were trained on}
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{data}}{Training data for models}
+\item{\code{data}}{Training data for models
+Set hold out test data from model training}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-res_mod-set_test_data"></a>}}
+\if{latex}{\out{\hypertarget{method-res_mod-set_test_data}{}}}
+\subsection{Method \code{set_test_data()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{R6_res_mod$set_test_data(test_data)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{test_data}}{Training data for models
+Set s adjustment}
+}
+\if{html}{\out{</div>}}
+}
+}
+\if{html}{\out{<hr>}}
+\if{html}{\out{<a id="method-res_mod-set_s_adj"></a>}}
+\if{latex}{\out{\hypertarget{method-res_mod-set_s_adj}{}}}
+\subsection{Method \code{set_s_adj()}}{
+\subsection{Usage}{
+\if{html}{\out{<div class="r">}}\preformatted{R6_res_mod$set_s_adj(s_adj)}\if{html}{\out{</div>}}
+}
+
+\subsection{Arguments}{
+\if{html}{\out{<div class="arguments">}}
+\describe{
+\item{\code{s_adj}}{Adjustment for s (NMF fix)}
 }
 \if{html}{\out{</div>}}
 }

@@ -5,6 +5,8 @@
 #' @importFrom R6 R6Class
 #' @importFrom spdep poly2nb
 #' @importFrom purrr list_rbind
+#' @importFrom dplyr filter
+#' @importFrom stats setNames weighted.mean
 R6_res_spread <- R6::R6Class(
   classname = "res_spread",
   cloneable = FALSE,

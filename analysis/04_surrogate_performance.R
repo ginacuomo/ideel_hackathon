@@ -79,7 +79,7 @@ relation_gg <- parm_grid %>% ggplot(
   theme_bw() +
   coord_equal(ratio = 2) +
   MetBrewer::scale_color_met_d("Egypt", direction = -1, name = "Effective \nTreatment \nCoverage") +
-  scale_linetype(name = "Proportion \n of AL usage") +
+  scale_linetype(name = "Proportion \nof AL used") +
   guides(color = guide_legend(override.aes = list(alpha = 1))) +
   ylab("Selection Coefficient") +
   xlab("Slide Prevalence (2-10)")

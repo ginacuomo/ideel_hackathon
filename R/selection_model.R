@@ -284,7 +284,7 @@ R6_res_mod <- R6::R6Class(
     set_data = function(data) { private$data <- data },
 
     #' Set hold out test data from model training
-    #' @param data Training data for models
+    #' @param test_data Training data for models
     set_test_data = function(test_data) { private$test_data <- test_data },
 
     #' Set s adjustment
