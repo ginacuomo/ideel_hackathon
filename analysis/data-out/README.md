@@ -39,7 +39,9 @@ In all the outputs above, the **central** times provide the estimated times base
 
 The **optimistic** times assume the upper or lower estimate value for each parameter (depending on the direction of its effect on selection) such that the selection of ArtR will increase at its slowest. Conversely, the **pessimistic** times assume the upper or lower value for each parameter (depending on the direction of its effect on selection) such that the selection of ArtR will increase at its fastest.
 
-Lastly, the uncertainty provided in each of the files, reflects the uncertainty that arises from our use of a stochastic, individual based model for the selection of ArtR. 
+The uncertainty provided in each of the files, reflects the uncertainty that arises from our use of a stochastic, individual based model for the selection of ArtR. 
+
+Lastly, in the longitudinal outputs, **artR_** is the frequency of artemisinin resistance overtime and **tf_** is average treatment failure over time. Note that treatment failure does not start at 0% at the beginning of simulations, even if there is minimal resistance, because each ACT is a not perfectly curative (i.e. treatment of wild type parasites still has an 2-4% 28-day treatment failure rate, depending on the ACT used).
 
 ### Shape Files
 
