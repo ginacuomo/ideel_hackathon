@@ -53,6 +53,8 @@ map_data <- vector("list", nrow(scenarios))
 # we need these so we can take samples from both posteriors
 # multiple to estimate multigenotype frequencies under assumtpion
 # of independence before calculating quantiles
+
+# N.B. These files are very large (Gb) so aren't pushed to Github
 crt_76T_prep <- readRDS("analysis/data-derived/car_models/crt_76T.rds")
 mdr_86Y_prep <- readRDS("analysis/data-derived/car_models/mdr1_86Y.rds")
 mdr_184F_prep <- readRDS("analysis/data-derived/car_models/mdr1_184F.rds")
@@ -206,6 +208,7 @@ private$simulate_selection(t = t, res_pos = res_pos_list[[t]], s_name = s_name)
 isos <- unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"])
 
 # Make a map at each t interval
+# N.B. Plots not committed to Github due to size constraints again
 pl_list <- vector("list", length(unique(out$t)))
 for(i in c(1, as.integer(length(unique(out$t))/4)+1, as.integer(length(unique(out$t))/2)+1)) {
   x <- unique(out$t)[i]
