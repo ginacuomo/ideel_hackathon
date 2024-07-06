@@ -22,11 +22,26 @@ pts <- sf::st_within(res_coord, map_1)
 
 # some points fall just outside border joins
 missingpts <- which(is.na(as.integer(pts)))
-pts[missingpts] <- sf::st_nearest_feature(res_coord[missingpts, ], map_1)
+found <- vector(length = length(nrow(res_coord)))
+for(i in seq_len(nrow(res_coord))){
+  isoi <- (allres %>% dplyr::filter(continent == "Africa"))[i,]$iso3c
+  f <- sf::st_nearest_feature(res_coord[i, ], map_1 %>% filter(iso == isoi))
+  f2 <- as.integer(rownames(map_1 %>% filter(iso == isoi))[f])
+  if(!is.na(f2)){
+  found[i] <- which(rownames(map_1) == f2)
+  } else {
+    found[i] <- -1
+  }
+}
+for(i in seq_along(missingpts)){
+pts[[missingpts[i]]] <- found[i]
+}
 
 # assign the allocated admin region to our res database
-afrres <- allres %>% dplyr::filter(continent == "Africa") %>%
-  mutate(id_1 = scenario_maps$map$id_1[as.integer(pts)])
+finalres <- allres %>% dplyr::filter(continent == "Africa")
+finalres <- finalres[which(as.integer(pts) != -1),]
+afrres <- finalres %>%
+  mutate(id_1 = map_1$id_1[as.integer(pts)[as.integer(pts)!=-1]])
 
 # now we need to group by admin region, i.e. id_1 and by year break
 afr_res_splits <- afrres %>%
@@ -126,7 +141,7 @@ map_for_CAR$seasonality <- unlist(lapply(seasonalprecip_inter, mean, na.rm = TRU
 map_for_CAR$seasonality[is.na(map_for_CAR$seasonality)] <- 59 # average for Sao Tome nearby
 
 saveRDS(map_for_CAR, here::here("analysis/data-derived/map_for_CAR.rds"))
-
+map_for_CAR <- readRDS(here::here("analysis/data-derived/map_for_CAR.rds"))
 
 # ---------------------------------------------------- #
 # 3. Build CAR models ----
