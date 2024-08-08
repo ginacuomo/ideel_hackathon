@@ -37,8 +37,8 @@ saveRDS(resis, here::here("analysis/data-derived/resistance_dfs.rds"))
 
 # 1. Get map info--------
 
-available_admin <- malariaAtlas::listShp(printed = FALSE, admin_level = "admin0")
-world_map_0 <- malariaAtlas::getShp(ISO = available_admin$iso, admin_level = c("admin0")) %>% sf::st_as_sf()
+world_map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% afr_isos) %>% sf::st_as_sf()
 isos <- unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"])
 
 # ---------------------------------------------------- o

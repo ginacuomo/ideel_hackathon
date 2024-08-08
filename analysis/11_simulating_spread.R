@@ -13,7 +13,10 @@ sf::sf_use_s2(FALSE)
 
 # Get the map_0 object
 isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"]))
-map_0 <- malariaAtlas::getShp(ISO = isos, admin_level = c("admin0")) %>% sf::st_as_sf()
+
+# MAP world map
+map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% isos) %>% sf::st_as_sf()
 
 # Get the selection model object
 res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))
@@ -200,7 +203,7 @@ out_all <- furrr::future_map(map_data, function(x){
 
 }, .progress = TRUE, .options = furrr_options(packages = "arms"))
 parallel::stopCluster(my.cluster)
-private$simulate_selection(t = t, res_pos = res_pos_list[[t]], s_name = s_name)
+
 # --------------------------------------------------------------------------#
 # 3. Plot our spread -----------------------------------------------------
 # --------------------------------------------------------------------------#
@@ -255,6 +258,7 @@ my.cluster <- parallel::makeCluster(
 future::plan(future::cluster, workers = my.cluster)
 
 # Plot all to the time series directory
+# not added to git to save space
 dir.create("analysis/plots/time_series")
 out_plots <- furrr::future_map(seq_along(unique(out$t)), function(i) {
 
@@ -284,7 +288,7 @@ out_plots <- furrr::future_map(seq_along(unique(out$t)), function(i) {
 
   return(1L)
 
-}, .progress = TRUE, .options = furrr_options(packages = "arms"))
+}, .progress = TRUE, .options = furrr_options(packages = c("arms","dplyr","sf")))
 parallel::stopCluster(my.cluster)
 
 # Make a movie of these
@@ -294,7 +298,6 @@ mapmate::ffmpeg(dir = "analysis/plots/time_series/",
                 delay = 1/12, overwrite = TRUE
 )
 
-file.remove(grep("test_\\d", list.files("analysis/plots/time_series/", full.names = TRUE), value = TRUE))
 
 # ---------------------------------------------------- #
 # 5. Creating Data Outputs  ----

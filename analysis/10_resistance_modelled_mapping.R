@@ -10,9 +10,9 @@ res_car <- readRDS(here::here("analysis/data-derived/CAR_modelled_res.rds"))
 # read in our scenario map
 scenario_maps <- readRDS(here::here("analysis/data-derived/scenario_maps_full.rds"))
 map_1 <- sf::st_make_valid(scenario_maps$map)
-available_admin <- malariaAtlas::listShp(printed = FALSE, admin_level = "admin0")
 isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"]))
-map_0 <- malariaAtlas::getShp(ISO = isos, admin_level = c("admin0")) %>% sf::st_as_sf()
+map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% isos) %>% sf::st_as_sf()
 
 # ---------------------------------------------------- o
 # 2. Function to plot median and upper and lower for a marker ----

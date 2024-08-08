@@ -13,7 +13,10 @@ sf::sf_use_s2(FALSE)
 
 # Get the map_0 object
 isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"]))
-map_0 <- malariaAtlas::getShp(ISO = isos, admin_level = c("admin0")) %>% sf::st_as_sf()
+# MAP world map
+map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% isos) %>% sf::st_as_sf()
+
 
 # Get the selection model object
 res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))

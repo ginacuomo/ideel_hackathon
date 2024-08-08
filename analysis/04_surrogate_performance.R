@@ -8,6 +8,7 @@ res_mod <- readRDS("analysis/data-derived/res_nmf_mod.rds")
 
 # Create a plot of model predictions plot for SI
 s <- "s_a_5"
+test <- res_mod$get_test_data()
 dat <- res_mod$get_test_data() %>% select(-starts_with("s")) %>% as.matrix
 pred_brnn <- res_mod$get_model_predict_f()$brnn(res_mod$get_models()[[s]]$brnn, dat, s)
 pred_monmlp <- res_mod$get_model_predict_f()$monmlp(res_mod$get_models()[[s]]$monmlp, dat, s)

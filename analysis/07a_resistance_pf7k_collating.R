@@ -4,8 +4,10 @@ library(tidyverse)
 # 1. Malariagen wrangle
 # ---------------------------------------------------- o
 
-mdf <- data.table::fread("https://www.malariagen.net/sites/default/files/Pf7_drug_resistance_marker_genotypes.txt") %>%
+mdf <- data.table::fread("https://www.malariagen.net/wp-content/uploads/2023/11/Pf7_drug_resistance_marker_genotypes.txt") %>%
   rename(sample = V1)
+# writing in case they remove it later
+write.csv(mdf, "analysis/data-raw/pf7k_raw.csv")
 
 # get the vcf grabbed GTs
 mdrex <- read.csv(here::here("analysis/data-raw/mdr.csv")) %>%
