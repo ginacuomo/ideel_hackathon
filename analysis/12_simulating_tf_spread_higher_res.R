@@ -159,6 +159,11 @@ for(i in seq_along(map_data)) {
 # 2. Run our simulation -----------------------------------------------------
 # --------------------------------------------------------------------------#
 
+# Grab the higher tf to res relationship
+X <- readRDS(here::here("analysis/data-derived/sims_nmf_higher_res//X.rds"))
+lpfs <- lapply(X[[1]]$drug_list$drugs, "[[", "lpf")
+names(lpfs) <- c("AL", "ASAQ", "DHAPPQ")
+
 # Initialise our model
 # get an adjacency matrix to figure out spread
 adj_mat <- spdep::poly2nb(afr_map)
@@ -205,7 +210,7 @@ run_lci_med_uci_sim <- function(spread_model, md) {
   # first simulate central
   spread_model$set_map_data(md)
   med <- spread_model$simulate_multiallelic_spread(export_freq = 0.25, t_break = 1, s_name =  paste0("s_a_", 1:6), t_end = 40)
-  med <- arms:::add_tf_to_output(med, spread_model)
+  med <- arms:::add_tf_to_output(med, spread_model, al_lpf = lpfs$AL, asaq_lpf = lpfs$ASAQ, dhappq_lpf = lpfs$DHAPPQ)
 
   # then worst
   md_worst <- md %>% filter(id_1 %in% afr_map$id_1) %>%
@@ -213,7 +218,7 @@ run_lci_med_uci_sim <- function(spread_model, md) {
 
   spread_model$set_map_data(md_worst)
   uci <- spread_model$simulate_multiallelic_spread(export_freq = 0.25, t_break = 1, s_name =  paste0("s_a_", 1:6), t_end = 40)
-  uci <- arms:::add_tf_to_output(uci, spread_model)
+  uci <- arms:::add_tf_to_output(uci, spread_model, al_lpf = lpfs$AL, asaq_lpf = lpfs$ASAQ, dhappq_lpf = lpfs$DHAPPQ)
 
   # then best
   md_best <- md %>% filter(id_1 %in% afr_map$id_1) %>%
@@ -221,7 +226,7 @@ run_lci_med_uci_sim <- function(spread_model, md) {
 
   spread_model$set_map_data(md_best)
   lci <- spread_model$simulate_multiallelic_spread(export_freq = 0.25, t_break = 1, s_name =  paste0("s_a_", 1:6), t_end = 40)
-  lci <- arms:::add_tf_to_output(lci, spread_model)
+  lci <- arms:::add_tf_to_output(lci, spread_model, al_lpf = lpfs$AL, asaq_lpf = lpfs$ASAQ, dhappq_lpf = lpfs$DHAPPQ)
 
   lci %>% select(id_1, t, artR_lci = a_5, tf_lci = tf) %>%
     left_join(med %>% select(id_1, t, artR_med = a_5, tf_med = tf)) %>%
@@ -291,33 +296,4 @@ write.csv(md_best_out, "analysis/data-out/optimistic_longitudinal_times_prospect
 
 
 # -----------------------
-
-md_central_out <- read.csv("analysis/data-out/central_longitudinal_times_prospective_higher_res.csv")
-md_worst_out <- read.csv("analysis/data-out/pessimistic_longitudinal_times_prospective_higher_res.csv")
-md_best_out <- read.csv("analysis/data-out/optimistic_longitudinal_times_prospective_higher_res.csv")
-
-pop <- squire::population %>% group_by(iso3c) %>%
-  summarise(n = sum(n)) %>%
-  rename(iso = iso3c)
-
-tf_med <- left_join(md_central_out, pop) %>% group_by(t) %>%
-  summarise(tf_med = weighted.mean(tf_med, n))
-tf_low <- left_join(md_best_out, pop) %>% group_by(t) %>%
-  summarise(tf_low = weighted.mean(tf_lci, n))
-tf_high <- left_join(md_worst_out, pop) %>% group_by(t) %>%
-  summarise(tf_high = weighted.mean(tf_uci, n))
-
-left_join(tf_low, tf_med) %>% left_join(tf_high) %>%
-  ggplot(aes(x = t, y = tf_med, ymin = tf_low, ymax = tf_high), color = "A") +
-  geom_ribbon(alpha = 0.2) +
-  geom_line() +
-  theme_bw() +
-  MetBrewer::scale_color_met_d("Egypt", direction = -1, name = "Treatment Failure") +
-  MetBrewer::scale_fill_met_d("Egypt", direction = -1, name = "Treatment Failure") +
-  ylab("Treatment Failure (%)") +
-  xlab("Year") +
-  scale_y_continuous(labels = scales::percent)
-
-
-
 
