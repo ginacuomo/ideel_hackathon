@@ -13,10 +13,11 @@ covars <- filter(covars, iso3c %in% isos)
 res_mod <- readRDS("analysis/data-derived/res_nmf_mod.rds")
 
 # MAP world map to
-world_map <- malariaAtlas::getShp(ISO = na.omit(unique(covars$iso3c)), admin_level = c("admin1")) %>% sf::st_as_sf()
-available_admin <- malariaAtlas::listShp(printed = FALSE, admin_level = "admin0")
-world_map_0 <- malariaAtlas::getShp(ISO = available_admin$iso, admin_level = c("admin0")) %>% sf::st_as_sf()
-
+afr_isos <- na.omit(countrycode::codelist$iso3c[which(countrycode::codelist$continent == "Africa")])
+world_map <- readRDS("analysis/data-derived/admin1_sf.rds") %>%
+  filter(iso %in% na.omit(unique(covars$iso3c))) %>% sf::st_as_sf()
+world_map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% afr_isos) %>% sf::st_as_sf()
 # make scenarios for the map
 drugs <- c("al", "asaq", "dhappq")
 scenarios <- lapply(drugs, function(x){

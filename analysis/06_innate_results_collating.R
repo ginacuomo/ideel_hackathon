@@ -115,7 +115,7 @@ write.csv(best_df, here::here("analysis/data-out/optimistic_times.csv"), row.nam
 comp_all <- list()
 for(i in seq_along(scenario_maps$map_data)) {
   comp_all[[i]] <- left_join(scenario_maps$map, scenario_maps$map_data[[i]]) %>% sf::st_drop_geometry() %>%
-    select(iso, name_0, name_1,id_1, matches("^s_a_"), micro210, ft) %>%
+    select(iso, name_0, name_1,id_1, matches("^s_a_"), micro210, ft, al, asaq, dhappq) %>%
     mutate(micro210_scen = scenario_maps$scenarios$micro210[i],
            ft_scen = scenario_maps$scenarios$ft[i],
            al_scen = scenario_maps$scenarios$al[i],

@@ -2,11 +2,12 @@
 # Use selection coefficients to simulate af and tf forward
 #' @noRd
 af_tf_simlation <- function(s,
-                             res_mod,
-                             t_seq = seq(0, 80, 0.1),
-                             al_lpf = magenta:::drug_create_al()$lpf,
-                             asaq_lpf = magenta:::drug_create_asaq()$lpf,
-                             dhappq_lpf = magenta:::drug_create_dhappq()$lpf){
+                            mdli,
+                            res_mod,
+                            t_seq = seq(0, 80, 0.1),
+                            al_lpf = magenta:::drug_create_al()$lpf,
+                            asaq_lpf = magenta:::drug_create_asaq()$lpf,
+                            dhappq_lpf = magenta:::drug_create_dhappq()$lpf){
 
   af <- lapply(names(s),
                function(x) {
@@ -42,10 +43,10 @@ af_tf_simlation <- function(s,
 # Use map data to conduct innate simulation for ArtR and TF
 #' @noRd
 innate_simulation <- function(md, res_mod, iso = "iso",
-                            t_seq = seq(0, 80, 1),
-                             al_lpf = magenta:::drug_create_al()$lpf,
-                             asaq_lpf = magenta:::drug_create_asaq()$lpf,
-                             dhappq_lpf = magenta:::drug_create_dhappq()$lpf) {
+                              t_seq = seq(0, 80, 1),
+                              al_lpf = magenta:::drug_create_al()$lpf,
+                              asaq_lpf = magenta:::drug_create_asaq()$lpf,
+                              dhappq_lpf = magenta:::drug_create_dhappq()$lpf) {
 
   # split our map data into admins
   mdl <- split(md, md$id_1)
@@ -58,9 +59,9 @@ innate_simulation <- function(md, res_mod, iso = "iso",
     s_min <- mdli %>% select(matches("^s_a_\\d_min"))
     s_max <- mdli %>% select(matches("^s_a_\\d_max"))
 
-    inn <- af_tf_simlation(s, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
-    inn_min <- af_tf_simlation(s_max, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
-    inn_max <- af_tf_simlation(s_min, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
+    inn <- af_tf_simlation(s, mdli, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
+    inn_min <- af_tf_simlation(s_max, mdli, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
+    inn_max <- af_tf_simlation(s_min, mdli, res_mod, t_seq, al_lpf, asaq_lpf, dhappq_lpf)
 
     res <- data.frame(
       iso = mdli[[iso]],

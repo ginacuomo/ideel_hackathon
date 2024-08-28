@@ -13,7 +13,10 @@ sf::sf_use_s2(FALSE)
 
 # Get the map_0 object
 isos <- na.omit(unique(countrycode::codelist$iso3c[countrycode::codelist$continent == "Africa"]))
-map_0 <- malariaAtlas::getShp(ISO = isos, admin_level = c("admin0")) %>% sf::st_as_sf()
+# MAP world map
+map_0 <- readRDS("analysis/data-derived/admin0_sf.rds") %>%
+  filter(iso %in% isos) %>% sf::st_as_sf()
+
 
 # Get the selection model object
 res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))
@@ -285,4 +288,36 @@ md_best_out <- best_out %>%
 write.csv(md_central_out, "analysis/data-out/central_longitudinal_times_prospective.csv", row.names = FALSE)
 write.csv(md_worst_out, "analysis/data-out/pessimistic_longitudinal_times_prospective.csv", row.names = FALSE)
 write.csv(md_best_out, "analysis/data-out/optimistic_longitudinal_times_prospective.csv", row.names = FALSE)
+
+
+# -----------------------
+
+md_central_out <- read.csv("analysis/data-out/central_longitudinal_times_prospective.csv")
+md_worst_out <- read.csv("analysis/data-out/pessimistic_longitudinal_times_prospective.csv")
+md_best_out <- read.csv("analysis/data-out/optimistic_longitudinal_times_prospective.csv")
+
+pop <- squire::population %>% group_by(iso3c) %>%
+  summarise(n = sum(n)) %>%
+  rename(iso = iso3c)
+
+tf_med <- left_join(md_central_out, pop) %>% group_by(t) %>%
+  summarise(tf_med = weighted.mean(tf_med, n))
+tf_low <- left_join(md_best_out, pop) %>% group_by(t) %>%
+  summarise(tf_low = weighted.mean(tf_lci, n))
+tf_high <- left_join(md_worst_out, pop) %>% group_by(t) %>%
+  summarise(tf_high = weighted.mean(tf_uci, n))
+
+left_join(tf_low, tf_med) %>% left_join(tf_high) %>%
+  ggplot(aes(x = t, y = tf_med, ymin = tf_low, ymax = tf_high), color = "A") +
+  geom_ribbon(alpha = 0.2) +
+  geom_line() +
+  theme_bw() +
+  MetBrewer::scale_color_met_d("Egypt", direction = -1, name = "Treatment Failure") +
+  MetBrewer::scale_fill_met_d("Egypt", direction = -1, name = "Treatment Failure") +
+  ylab("Treatment Failure (%)") +
+  xlab("Year") +
+  scale_y_continuous(labels = scales::percent)
+
+
+
 

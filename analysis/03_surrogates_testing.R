@@ -3,7 +3,7 @@
 # -------------------------------------------------------- #
 
 # Get our data that we are training our models for
-res_list <- readRDS(here::here("analysis/data-derived/model_s.rds"))
+res_list <- readRDS(here::here("analysis/data-derived/modelnmf_s.rds"))
 for(i in seq_along(res_list)) {
   res_list[[i]]$parset <- i
 }
@@ -207,7 +207,7 @@ saveRDS(list(a1_monmlp,a2_monmlp,a3_monmlp,a4_monmlp,a5_monmlp,a6_monmlp), "anal
 # -------------------------------------------------------- #
 
 # Create the res selection predicition model
-res_mod <- R6_res_mod$new(data = train)
+res_mod <- R6_res_mod$new(data = train, test_data = test)
 
 # create our model lists
 xgb_mod_list <- readRDS("analysis/data-derived/xgb_list.rds")
@@ -295,14 +295,14 @@ for(n in names(monmlp_mod_list)) {
 
 }
 
-saveRDS(res_mod, "analysis/data-derived/res_mod.rds")
+saveRDS(res_mod, "analysis/data-derived/res_nmf_mod.rds")
 
 
 # -------------------------------------------------------- #
 # 5. Create selection error models ----
 # -------------------------------------------------------- #
 
-res_mod <- readRDS(here::here("analysis/data-derived/res_mod.rds"))
+res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))
 
 # create our data set
 train_reps <- do.call(rbind,res_list[train_indices]) %>%
@@ -441,11 +441,9 @@ for(n in names(monmlp_err_mod_list)) {
   }
   res_mod$add_err_model_predict_f(predict_err_monlp, "monmlp")
 }
+saveRDS(res_mod, "analysis/data-derived/res_nmf_mod.rds")
 
-saveRDS(res_mod, "analysis/data-derived/res_mod.rds")
-
-
-# create our test data set
+# create our test data set for error if needed
 test_reps <- do.call(rbind,res_list[-train_indices]) %>%
   group_by(parset) %>%
   mutate(micro210 = median(micro210)) %>%
@@ -455,9 +453,10 @@ test_reps <- do.call(rbind,res_list[-train_indices]) %>%
   ungroup %>%
   select(-linked, -mu, -fitness, -parset)
 
+
 # -------------------------------------------------------- #
 # 6. Rebuild if underlying R6 adapts ----
 # -------------------------------------------------------- #
-res_mod <- readRDS(here::here("analysis/data-derived/res_mod.rds"))
+res_mod <- readRDS(here::here("analysis/data-derived/res_nmf_mod.rds"))
 new_res <- create_res_mod_from_res_mod(res_mod)
-saveRDS(new_res, here::here("analysis/data-derived/res_mod.rds"))
+saveRDS(new_res, here::here("analysis/data-derived/res_nmf_mod.rds"))
