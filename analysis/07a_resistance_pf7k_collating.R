@@ -35,7 +35,7 @@ mdrex_df <- mdrex %>%
 mdf <- left_join(mdf, mdrex_df, by = "sample")
 
 # grab the meta information for getting lat long and sample year
-meta <- read.csv("https://www.malariagen.net/sites/default/files/Pf7_samples.txt", sep = "\t")
+meta <- read.csv("analysis/data-raw/Pf7_samples.txt", sep = "\t") # weblink no longer works
 mdf <- left_join(mdf, meta %>% rename(sample = Sample), by = "sample")
 
 # sort this into a consistent format that is the same as the WHO/WWWARN information
