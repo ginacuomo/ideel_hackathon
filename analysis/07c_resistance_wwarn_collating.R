@@ -1,12 +1,12 @@
 library(tidyverse)
 
 # A. ART
-# as of 2 Jan 2024 ART-R markers (valid and candidate)
-validated <- c("F446I", "N458Y", "C469Y", "M476I", "Y493H", "R539T", "I543T",
-               "P553L", "R561H", "P574L", "C580Y", "R622I", "A675V",
-               "P441L", "G449A", "C469F", "A481V", "R515K", "P527H",
-               "N537D", "N537I", "G538V", "V568G")
-validated <- paste0(validated, collapse = "|")
+# # as of 2 Jan 2024 ART-R markers (valid and candidate)
+# validated <- c("F446I", "N458Y", "C469Y", "M476I", "Y493H", "R539T", "I543T",
+#                "P553L", "R561H", "P574L", "C580Y", "R622I", "A675V",
+#                "P441L", "G449A", "C469F", "A481V", "R515K", "P527H",
+#                "N537D", "N537I", "G538V", "V568G")
+# validated <- paste0(validated, collapse = "|")
 
 # ---------------------------------------------------- o
 # 1. WWARN database compile ----
@@ -17,12 +17,12 @@ k13ww <- readxl::read_xls("analysis/data-raw/WWARN_K13_database_04-12-2033.xls",
 pdww <- readxl::read_xls("analysis/data-raw/WWARN_partnerdrug_database_04-12-2023.xls", sheet = 1)
 
 # right will need to find admin 1 globally based on lat long. Grab from hrp2 work
-tf <- tempfile()
-download.file("https://github.com/OJWatson/hrpup/blob/main/analysis/data_derived/R6_WHO_Compliant_map.rds?raw=true", destfile = tf)
-goodmap <- readRDS(tf)
-tf <- tempfile()
-download.file("https://github.com/OJWatson/hrpup/blob/main/analysis/data_derived/scenario_maps.rds?raw=true", destfile = tf)
-map_with_nms <- readRDS(tf)
+# make sure we don't lose the lat long
+# code doesn't run for me so using downloaded files
+# ("https://github.com/OJWatson/hrpup/blob/main/analysis/data_derived/R6_WHO_Compliant_map.rds?raw=true", destfile = tf)
+goodmap <- readRDS("analysis/data-derived/R6_WHO_Compliant_map.rds")
+# ("https://github.com/OJWatson/hrpup/blob/main/analysis/data_derived/scenario_maps.rds?raw=true", destfile = tf)
+map_with_nms <- readRDS("analysis/data-derived/scenario_maps.rds")
 goodmap <- left_join(goodmap$.__enclos_env__$private$map, map_with_nms$map %>% sf::st_drop_geometry(), by = "id_1")
 goodmap <- sf::st_make_valid(goodmap)
 
@@ -97,25 +97,20 @@ pooruuid <- prev_checks$uuid[which(!(abs(prev_checks$prev - 1) < 0.000001))]
 
 # A. ART
 # as of 2 Jan 2024 ART-R markers (valid and candidate)
-validated <- c("F446I", "N458Y", "C469Y", "M476I", "Y493H", "R539T", "I543T",
-               "P553L", "R561H", "P574L", "C580Y", "R622I", "A675V",
-               "P441L", "G449A", "C469F", "A481V", "R515K", "P527H",
-               "N537D", "N537I", "G538V", "V568G")
-validated <- paste0(validated, collapse = "|")
+validated <- read_csv("analysis/data-raw/mutation_dictionary.csv")
+validated <- validated %>%
+  dplyr::mutate(gene_mut = paste0(gene, "-", substring(mut,2)))
+validated_mut <- paste0(validated$mut, collapse = "|")
 
 k13ww_res_df <- k13wwdf %>%
-  mutate(res = 0) %>%
-  mutate(res = replace(res, val == "associated with slow clearance", 1)) %>%
-  # this line below is correct as the only mixed genotype infections reported are:
-  # "C469Y/F" "R528G/T" "A569T/S" "R575K/L" "V636A/V"
-  # for which, in the first, both alleles are validated, and
-  # for the rest none are validated, so no need to catch for mixed validated infections
-  mutate(res = replace(res, val == "unknown effect on clearance" &
-                         grepl(validated, mut, ignore.case = TRUE), 1)) %>%
-  mutate(mut = replace(mut, res == 0, "WT")) %>%
-  mutate(mut = replace(mut, res == 1, "k13_valid")) %>%
-  select(-res) %>%
-  group_by(across(c(-x, -n, -prev, -mut, -val))) %>%
+  # no longer need res scores and instead are pulling in from the validated csv
+  dplyr::mutate(mut = if_else(mut == "wildtype", "WT", substring(mut, 2))) %>%
+  dplyr::mutate(gene_mut = paste0(gene, "-", mut)) %>%
+  # add annotations of classification
+  dplyr::left_join(select(validated, c("gene_mut", "annotation")), by = "gene_mut") %>%
+  dplyr::mutate(annotation = if_else(mut == "WT", "wildtype", annotation)) %>%
+  dplyr::mutate(annotation = if_else(is.na(annotation), "unknown", annotation)) %>%
+  group_by(across(c(-x, -n, -prev, -mut, -gene_mut, -annotation))) %>%
   mutate(uuid = cur_group_id()) %>%
   ungroup
 
@@ -238,7 +233,7 @@ k13ww_res_df_new$prev <- k13ww_res_df_new$x / k13ww_res_df_new$n
 # is due to different samples in the same time period. So add n to uuid
 k13ww_res_df_new <- k13ww_res_df_new %>%
   ungroup %>%
-group_by(across(c(-x, -prev, -mut, -val))) %>%
+  group_by(across(c(-x, -prev, -mut, -val))) %>%
   mutate(uuid = cur_group_id()) %>%
   ungroup
 
@@ -258,7 +253,7 @@ k13ww_final_res_df <- k13ww_res_df_new %>%
   mutate(mut = "k13_valid") %>%
   select(iso3c, admin_0, admin_1, site, lat, long,
          year, study_start_year, study_end_year,
-         x, n, prev, gene, mut, database, pmid, url, source) %>%
+         x, n, prev, gene, mut, gene_mut, annotation, database, pmid, url, source) %>%
   ungroup
 
 
@@ -559,8 +554,8 @@ pdcrtspl2 <- pdcrt %>%
             prev = x/n) %>%
   mutate(mut = "crt_76T") %>%
   select(iso3c, admin_0, admin_1, site, lat, long,
-                                year, study_start_year, study_end_year,
-                                x, n, prev, gene, mut, database, pmid, url, source)
+         year, study_start_year, study_end_year,
+         x, n, prev, gene, mut, database, pmid, url, source)
 
 # now to focus on when sum of x does not equal n
 
@@ -580,7 +575,7 @@ pdcrtspl3 <- pdcrt %>%
   filter(!xn) %>%
   filter((mut %in% c(mut_loc,wt_loc,mix_loc))) %>%
   group_by(uuid) %>%
-mutate(xn = all(sum(x) == n[1])) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
   filter(xn) %>%
   group_by(across(c(-x, -n, -prev, -mix, -rowid))) %>%
   summarise(x = sum(x), n = unique(n)) %>%
@@ -649,11 +644,11 @@ pdcrtspl5 <- pdcrt %>%
 # TODO: Check these manually later that this is the case for these
 pdcrtspl6 <- rbind(
   pdcrt %>%
-  filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid))) %>%
-  group_by(uuid) %>%
-  filter(n() == 2) %>%
-  filter(sum(x) < n[1]) %>%
-  mutate(x = x + (n[1] - sum(x))/2),
+    filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid))) %>%
+    group_by(uuid) %>%
+    filter(n() == 2) %>%
+    filter(sum(x) < n[1]) %>%
+    mutate(x = x + (n[1] - sum(x))/2),
   pdcrt %>%
     filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid))) %>%
     group_by(uuid) %>%
@@ -679,28 +674,28 @@ pdcrtspl6 <- rbind(
 # These are mixed infections being reallocated
 # TODO: Check these manually later that this is the case for these
 pdcrtspl7 <-
-rbind(
-  pdcrt %>%
-    filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid, pdcrtspl6$uuid))) %>%
-    group_by(uuid) %>%
-    filter(n() == 3) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 SxxxT", "pfcrt 76T")) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxT", "pfcrt 76T")) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxK", "pfcrt K76")) %>%
-    filter(mut %in% c(mut_loc, wt_loc)) %>%
-    filter(sum(x) < n[1]) %>%
-    mutate(x = x + (n[1] - sum(x))/2),
-  pdcrt %>%
-    filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid, pdcrtspl6$uuid))) %>%
-    group_by(uuid) %>%
-    filter(n() == 3) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 SxxxT", "pfcrt 76T")) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxT", "pfcrt 76T")) %>%
-    mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxK", "pfcrt K76")) %>%
-    filter(mut %in% c(mut_loc, wt_loc)) %>%
-    filter(sum(x) > n[1]) %>%
-    mutate(x = x - (sum(x) - n[1])/2)
-) %>%
+  rbind(
+    pdcrt %>%
+      filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid, pdcrtspl6$uuid))) %>%
+      group_by(uuid) %>%
+      filter(n() == 3) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 SxxxT", "pfcrt 76T")) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxT", "pfcrt 76T")) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxK", "pfcrt K76")) %>%
+      filter(mut %in% c(mut_loc, wt_loc)) %>%
+      filter(sum(x) < n[1]) %>%
+      mutate(x = x + (n[1] - sum(x))/2),
+    pdcrt %>%
+      filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid, pdcrtspl5$uuid, pdcrtspl6$uuid))) %>%
+      group_by(uuid) %>%
+      filter(n() == 3) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 SxxxT", "pfcrt 76T")) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxT", "pfcrt 76T")) %>%
+      mutate(mut = replace(mut, mut == "pfcrt 72-76 CxxxK", "pfcrt K76")) %>%
+      filter(mut %in% c(mut_loc, wt_loc)) %>%
+      filter(sum(x) > n[1]) %>%
+      mutate(x = x - (sum(x) - n[1])/2)
+  ) %>%
   filter(mut == "pfcrt 76T") %>%
   group_by(across(c(-x, -n, -prev, -mix, -rowid))) %>%
   summarise(x = sum(x), n = unique(n)) %>%
@@ -729,7 +724,7 @@ pdcrtspl8 <- rbind(
     mutate(x = x + (n[1] - sum(x))/2),
   pdcrt %>%
     filter(!(uuid %in% c(pdcrtspl1$uuid, pdcrtspl2$uuid, pdcrtspl3$uuid,
-                        pdcrtspl5$uuid, pdcrtspl6$uuid, pdcrtspl7$uuid))) %>%
+                         pdcrtspl5$uuid, pdcrtspl6$uuid, pdcrtspl7$uuid))) %>%
     group_by(uuid) %>%
     filter(mut %in% c(mut_loc, wt_loc)) %>%
     filter(n() == 2) %>%
@@ -772,192 +767,192 @@ crtww_final_res_df <-
   (pdcrt$uuid %>% unique %>% length())
 
 
-  # ---------------------------------------------------- o
-  # 5. Sort MDR1 ----
-  # ---------------------------------------------------- o
+# ---------------------------------------------------- o
+# 5. Sort MDR1 ----
+# ---------------------------------------------------- o
 
-  # grab and fitler to just important SNPs
+# grab and fitler to just important SNPs
 pdmdr1 <- pdwwspl$mdr1 %>%
-    filter(grepl("184|86|copy|NFD|NxxxD|YYXXY|YYY", mut))
+  filter(grepl("184|86|copy|NFD|NxxxD|YYXXY|YYY", mut))
 
-  # first put into study time lat points for looking at
-  pdmdr1 <- pdmdr1 %>%
-    group_by(across(c(-x,-prev, -mut, -rowid, -mix))) %>%
-    mutate(uuid = cur_group_id()) %>%
-    ungroup()
+# first put into study time lat points for looking at
+pdmdr1 <- pdmdr1 %>%
+  group_by(across(c(-x,-prev, -mut, -rowid, -mix))) %>%
+  mutate(uuid = cur_group_id()) %>%
+  ungroup()
 
-  ## STEP 1: Work out how to sort out the markers ------------------------------
+## STEP 1: Work out how to sort out the markers ------------------------------
 
-  # Viewed through example splits like this to determine that we can filter out some more markers
-  # pdmdr1 %>% ungroup %>%
-  #   filter(stuid %in%
-  #            (pdmdr1 %>% filter(mut == "pfmdr1 YYY") %>% pull(stuid) %>% unique())) %>%
-  #   split(.$stuid)
+# Viewed through example splits like this to determine that we can filter out some more markers
+# pdmdr1 %>% ungroup %>%
+#   filter(stuid %in%
+#            (pdmdr1 %>% filter(mut == "pfmdr1 YYY") %>% pull(stuid) %>% unique())) %>%
+#   split(.$stuid)
 
-  #  [1,] "pfmdr1 86Y"
-  #  [2,] "pfmdr1 184F"
-  #  [3,] "pfmdr1 copy number >1"
-  #  [4,] "pfmdr1 NxxxD" : the same as"pfmdr1 N86" : Just EH info so remove
-  #  [5,] "pfmdr1 N86"
-  #  [6,] "pfmdr1 86N/Y"
-  #  [7,] "pfmdr1 Y184"
-  #  [8,] "pfmdr1 184Y/F"
-  #  [9,] "pfmdr1 YYXXY" : These are just giving EH info but in all studies prevalence can be identified from the other markers : remove
-  #  [10,] "pfmdr1 YYY" : Likewise with YYY and NFD
-  #  [11,] "pfmdr1 NFD"
+#  [1,] "pfmdr1 86Y"
+#  [2,] "pfmdr1 184F"
+#  [3,] "pfmdr1 copy number >1"
+#  [4,] "pfmdr1 NxxxD" : the same as"pfmdr1 N86" : Just EH info so remove
+#  [5,] "pfmdr1 N86"
+#  [6,] "pfmdr1 86N/Y"
+#  [7,] "pfmdr1 Y184"
+#  [8,] "pfmdr1 184Y/F"
+#  [9,] "pfmdr1 YYXXY" : These are just giving EH info but in all studies prevalence can be identified from the other markers : remove
+#  [10,] "pfmdr1 YYY" : Likewise with YYY and NFD
+#  [11,] "pfmdr1 NFD"
 
-  # filter out unneeded EH info and now can easily assign locus groups
-  pdmdr1 <- pdmdr1 %>%
-    filter(grepl("184|86|copy", mut)) %>%
-    mutate(locus = NA) %>%
-    mutate(locus = replace(locus, grepl("86", mut), "86")) %>%
-    mutate(locus = replace(locus, grepl("184", mut), "184")) %>%
-    mutate(locus = replace(locus, grepl("copy", mut), "CNV"))
+# filter out unneeded EH info and now can easily assign locus groups
+pdmdr1 <- pdmdr1 %>%
+  filter(grepl("184|86|copy", mut)) %>%
+  mutate(locus = NA) %>%
+  mutate(locus = replace(locus, grepl("86", mut), "86")) %>%
+  mutate(locus = replace(locus, grepl("184", mut), "184")) %>%
+  mutate(locus = replace(locus, grepl("copy", mut), "CNV"))
 
-  res_loc <- c("pfmdr1 184F", "pfmdr1 86Y", "pfmdr1 copy number >1")
-  mix_loc <- c("pfmdr1 184Y/F", "pfmdr1 86N/Y")
-  wt_loc <- c("pfmdr1 N86", "pfmdr1 Y184")
+res_loc <- c("pfmdr1 184F", "pfmdr1 86Y", "pfmdr1 copy number >1")
+mix_loc <- c("pfmdr1 184Y/F", "pfmdr1 86N/Y")
+wt_loc <- c("pfmdr1 N86", "pfmdr1 Y184")
 
-  # have they all been grouped - Yes
-  pdmdr1$locus %>% table(useNA = "a")
+# have they all been grouped - Yes
+pdmdr1$locus %>% table(useNA = "a")
 
-  ## STEP 2: Figure out how mixed infections work ------------------------------
+## STEP 2: Figure out how mixed infections work ------------------------------
 
-  # Some studies the mixed infections (184Y/F and 86N/Y) are reported separately
-  # in prevalence, i.e. prev of N86, 86Y and 86N/Y > 1
+# Some studies the mixed infections (184Y/F and 86N/Y) are reported separately
+# in prevalence, i.e. prev of N86, 86Y and 86N/Y > 1
 
-  # put into study time lat points and work out which have different mixed numbers
-  pdmdr1 <- pdmdr1 %>%
-    group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid))) %>%
-    mutate(newid = cur_group_id()) %>%
-    mutate(non_mix = all(mix == x))
+# put into study time lat points and work out which have different mixed numbers
+pdmdr1 <- pdmdr1 %>%
+  group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid))) %>%
+  mutate(newid = cur_group_id()) %>%
+  mutate(non_mix = all(mix == x))
 
-  # non mix, i.e. where the mix counts equal to the x, all have the same n
-  pdmdr1 %>% filter(!non_mix) %>%
-    group_by(newid) %>% summarise(n = length(unique(n))) %>% pull(n) %>% all
-
-
-  ### TYPE 1 ------------------------------
-  # this means that these ones we can use x for x but must account for mix
-  # i.e. grab marker values from x for 86Y 184F and CNV
-  # and we then will need to add half from the mixed genotype
-
-  # for viewing each group
-  # pdmdr1 %>% filter(!non_mix) %>%
-  #   group_by(newid) %>%
-  #   mutate(xn = all(sum(x) == n[1])) %>%
-  #   filter(xn) %>%
-  #   split(.$newid)
-
-  mdrsplit1 <- pdmdr1 %>% filter(!non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(xn) %>%
-    group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid))) %>%
-    summarise(x = x[mut %in% res_loc] + ifelse(any(mut %in% mix_loc), 0.5*x[mut %in% mix_loc], 0),
-                n = unique(n),
-              prev = x/n) %>%
-    mutate(mut = "mdr1_86Y") %>%
-    mutate(mut = replace(mut, locus == "184", "mdr1_184F"))
-
-  # Note: There used to be a type 2 here where the sum of x didn't equal n
-  # here but these are all due to typos at WWARN or in studies themselves
-  # All the above corrections earlier were by iterating through this type
-  ### TYPE 2 ------------------------------
-  # pdmdr1 %>% filter(!non_mix) %>%
-  #   group_by(newid) %>%
-  #   mutate(xn = all(sum(x) == n[1])) %>%
-  #   filter(!xn) %>%
-  #   group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid)))
+# non mix, i.e. where the mix counts equal to the x, all have the same n
+pdmdr1 %>% filter(!non_mix) %>%
+  group_by(newid) %>% summarise(n = length(unique(n))) %>% pull(n) %>% all
 
 
-  # and for those where mix is the same and all x add up to n
-  # i.e. grab marker values from x for 86Y 184F and CNV
-  # checked these work with:
-  ### TYPE 3 ------------------------------
-  pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(xn) %>%
-    group_by(newid) %>% mutate(prev = x/n) %>% filter(grepl("184",mut)) %>% mutate(p = sum(prev)) %>% filter(p!=1)
+### TYPE 1 ------------------------------
+# this means that these ones we can use x for x but must account for mix
+# i.e. grab marker values from x for 86Y 184F and CNV
+# and we then will need to add half from the mixed genotype
 
-  pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(xn) %>%
-    group_by(newid) %>% mutate(prev = x/n) %>% filter(grepl("86",mut)) %>% mutate(p = sum(prev)) %>% filter(p!=1)
+# for viewing each group
+# pdmdr1 %>% filter(!non_mix) %>%
+#   group_by(newid) %>%
+#   mutate(xn = all(sum(x) == n[1])) %>%
+#   filter(xn) %>%
+#   split(.$newid)
 
-  # CNV the WT is not reported so this would not be expected to add to 1
+mdrsplit1 <- pdmdr1 %>% filter(!non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(xn) %>%
+  group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid))) %>%
+  summarise(x = x[mut %in% res_loc] + ifelse(any(mut %in% mix_loc), 0.5*x[mut %in% mix_loc], 0),
+            n = unique(n),
+            prev = x/n) %>%
+  mutate(mut = "mdr1_86Y") %>%
+  mutate(mut = replace(mut, locus == "184", "mdr1_184F"))
 
-  # so just grab 86Y 184F and CNV rows from this filter
-  mdrsplit2 <- pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(xn) %>%
-    group_by(newid) %>%
-    mutate(prev = x/n) %>%
-    filter(mut %in% res_loc)
+# Note: There used to be a type 2 here where the sum of x didn't equal n
+# here but these are all due to typos at WWARN or in studies themselves
+# All the above corrections earlier were by iterating through this type
+### TYPE 2 ------------------------------
+# pdmdr1 %>% filter(!non_mix) %>%
+#   group_by(newid) %>%
+#   mutate(xn = all(sum(x) == n[1])) %>%
+#   filter(!xn) %>%
+#   group_by(across(c(-x, -n, -prev, -mut, -mix, -rowid)))
 
-  ### TYPE 4 ------------------------------
 
-  # This last group is now composed of samples where the
-  # x does not sum to n but the mix equals the n,
-  # Many of these groups only report the resistance prevalence
-  # so where there is only 1 record per newid and it is a resistance
-  # locus we can use those directly
-  mdrsplit3 <- pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(!xn) %>%
-    filter(n()==1) %>%
-    group_by(newid) %>%
-    mutate(prev = x/n) %>%
-    filter(mut %in% res_loc)
+# and for those where mix is the same and all x add up to n
+# i.e. grab marker values from x for 86Y 184F and CNV
+# checked these work with:
+### TYPE 3 ------------------------------
+pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(xn) %>%
+  group_by(newid) %>% mutate(prev = x/n) %>% filter(grepl("184",mut)) %>% mutate(p = sum(prev)) %>% filter(p!=1)
 
-  ### TYPE 5 ------------------------------
-  # Some entries are for wildtype rather than the mutant
-  # so we need to change these round to reflect the mut prevalence
-  mdrsplit4 <- pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(!xn) %>%
-    filter(n()==1) %>%
-    group_by(newid) %>%
-    filter(mut %in% wt_loc) %>%
-    mutate(mut = replace(mut, mut == "pfmdr1 N86", "pfmdr1 86Y")) %>%
-    mutate(mut = replace(mut, mut == "pfmdr1 Y184", "pfmdr1 184F")) %>%
-    mutate(x = n-x) %>%
-    mutate(prev = x/n)
+pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(xn) %>%
+  group_by(newid) %>% mutate(prev = x/n) %>% filter(grepl("86",mut)) %>% mutate(p = sum(prev)) %>% filter(p!=1)
 
-  ### TYPE 6 ------------------------------
-  # The last type are multiple samples of CNV in the same
-  # locations/study etc but they are split out
-  # so group and sum these
-  mdrsplit5 <- pdmdr1 %>% filter(non_mix) %>%
-    group_by(newid) %>%
-    mutate(xn = all(sum(x) == n[1])) %>%
-    filter(!xn) %>%
-    filter(n()>1) %>%
-    group_by(across(c(-x, -n, -prev, -mut,-mix,-rowid))) %>%
-    summarise(x = sum(x), n = unique(n)) %>%
-    mutate(mut = "mdr1_CNV") %>%
-    mutate(prev = x/n)
+# CNV the WT is not reported so this would not be expected to add to 1
+
+# so just grab 86Y 184F and CNV rows from this filter
+mdrsplit2 <- pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(xn) %>%
+  group_by(newid) %>%
+  mutate(prev = x/n) %>%
+  filter(mut %in% res_loc)
+
+### TYPE 4 ------------------------------
+
+# This last group is now composed of samples where the
+# x does not sum to n but the mix equals the n,
+# Many of these groups only report the resistance prevalence
+# so where there is only 1 record per newid and it is a resistance
+# locus we can use those directly
+mdrsplit3 <- pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(!xn) %>%
+  filter(n()==1) %>%
+  group_by(newid) %>%
+  mutate(prev = x/n) %>%
+  filter(mut %in% res_loc)
+
+### TYPE 5 ------------------------------
+# Some entries are for wildtype rather than the mutant
+# so we need to change these round to reflect the mut prevalence
+mdrsplit4 <- pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(!xn) %>%
+  filter(n()==1) %>%
+  group_by(newid) %>%
+  filter(mut %in% wt_loc) %>%
+  mutate(mut = replace(mut, mut == "pfmdr1 N86", "pfmdr1 86Y")) %>%
+  mutate(mut = replace(mut, mut == "pfmdr1 Y184", "pfmdr1 184F")) %>%
+  mutate(x = n-x) %>%
+  mutate(prev = x/n)
+
+### TYPE 6 ------------------------------
+# The last type are multiple samples of CNV in the same
+# locations/study etc but they are split out
+# so group and sum these
+mdrsplit5 <- pdmdr1 %>% filter(non_mix) %>%
+  group_by(newid) %>%
+  mutate(xn = all(sum(x) == n[1])) %>%
+  filter(!xn) %>%
+  filter(n()>1) %>%
+  group_by(across(c(-x, -n, -prev, -mut,-mix,-rowid))) %>%
+  summarise(x = sum(x), n = unique(n)) %>%
+  mutate(mut = "mdr1_CNV") %>%
+  mutate(prev = x/n)
 
 ## STEP 3. Bring all together againb-------------------
 
-  # and group by to record prevalence of each mdr1 marker type
-  mdr1ww_final_res_df <- rbind(mdrsplit1, mdrsplit2, mdrsplit3, mdrsplit4, mdrsplit5) %>%
-    ungroup %>%
-    select(iso3c, admin_0, admin_1, site, lat, long,
-           year, study_start_year, study_end_year,
-           x, n, prev, gene, mut, database, pmid, url, source) %>%
-    ungroup %>%
-    mutate(mut = replace(mut, mut == "pfmdr1 86Y", "mdr1_86Y")) %>%
-    mutate(mut = replace(mut, mut == "pfmdr1 184F", "mdr1_184F")) %>%
-    mutate(mut = replace(mut, mut == "pfmdr1 copy number >1", "mdr1_CNV"))
+# and group by to record prevalence of each mdr1 marker type
+mdr1ww_final_res_df <- rbind(mdrsplit1, mdrsplit2, mdrsplit3, mdrsplit4, mdrsplit5) %>%
+  ungroup %>%
+  select(iso3c, admin_0, admin_1, site, lat, long,
+         year, study_start_year, study_end_year,
+         x, n, prev, gene, mut, database, pmid, url, source) %>%
+  ungroup %>%
+  mutate(mut = replace(mut, mut == "pfmdr1 86Y", "mdr1_86Y")) %>%
+  mutate(mut = replace(mut, mut == "pfmdr1 184F", "mdr1_184F")) %>%
+  mutate(mut = replace(mut, mut == "pfmdr1 copy number >1", "mdr1_CNV"))
 
-  # and the sanity check
-  (rbind(mdrsplit1, mdrsplit2, mdrsplit3, mdrsplit4, mdrsplit5) %>%
+# and the sanity check
+(rbind(mdrsplit1, mdrsplit2, mdrsplit3, mdrsplit4, mdrsplit5) %>%
     pull(uuid) %>% length()) ==
   (pdmdr1$newid %>% unique %>% length())
 
